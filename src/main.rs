@@ -23,7 +23,11 @@ async fn handle_updates(api: &Api) -> Result<(), Error> {
 
 	if let UpdateKind::Message(message) = update.kind {
 	    if let MessageKind::Text { ref data, .. } = message.kind {
-		println!("{}: {}", &message.from.first_name, data);
+		match data.as_str() {
+		    "/start" => println!("{} started the bot", message.from.username.unwrap_or("Someone".to_string())),
+		    "/stop" => println!("{} stopeed the bot", message.from.username.unwrap_or("Someone".to_string())),
+		    _ => ()
+		}
 	    }
 	}
     }
