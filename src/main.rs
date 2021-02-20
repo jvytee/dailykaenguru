@@ -1,9 +1,14 @@
+use log::{
+    debug,
+    info
+};
 use std::env;
 use telegram_bot::{
     prelude::*,
     Api,
     Error,
     Message,
+    MessageChat,
     MessageKind,
     UpdateKind
 };
@@ -11,6 +16,7 @@ use tokio_stream::StreamExt;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    env_logger::init();
     let token: String = env::var("DAILYKAENGURU_TOKEN").expect("Could not fetch DAILYKAENGURU_TOKEN environment variable");
     let api = Api::new(token);
 
@@ -26,8 +32,8 @@ async fn handle_updates(api: Api) -> Result<(), Error> {
 	if let UpdateKind::Message(message) = update.kind {
 	    if let MessageKind::Text { ref data, .. } = message.kind {
 		match data.as_str() {
-		    "/start" => start_cmd(&api, message).await,
-		    "/stop" => stop_cmd(&api, message).await,
+		    "/start" => start_cmd(&api, message).await?,
+		    "/stop" => stop_cmd(&api, message).await?,
 		    _ => ()
 		}
 	    }
@@ -37,13 +43,27 @@ async fn handle_updates(api: Api) -> Result<(), Error> {
     Ok(())
 }
 
-async fn start_cmd(api: &Api, message: Message) {
+async fn start_cmd(api: &Api, message: Message) -> Result<(), Error> {
+    let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
-    api.send(chat.text("Hallo!")).await;
+
+    info!("Starting delivery to {} in chat {}", username, chat.id());
+    api.send(chat.text("Hallo!")).await?;
+
+    Ok(())
 }
 
-async fn stop_cmd(api: &Api, message: Message) {
+async fn stop_cmd(api: &Api, message: Message) -> Result<(), Error> {
+    let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
-    api.send(chat.text("Ciao!")).await;
-    api.send(chat.leave()).await;
+
+    info!("Stopping delivery to {} in chat {}", username, chat.id());
+    api.send(chat.text("Ciao!")).await?;
+
+    match chat {
+	MessageChat::Private(_) => debug!("Cannot leave private chat"),
+	_ => api.send(chat.leave()).await?
+    }
+
+    Ok(())
 }
