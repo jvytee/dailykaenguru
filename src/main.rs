@@ -1,12 +1,13 @@
 mod bot;
+mod download;
 
 use getopts::Options;
-use log::{
-    debug,
-    info
-};
 use std::env;
-use time::OffsetDateTime;
+use time::{
+    date,
+    Date,
+    OffsetDateTime
+};
 
 
 #[tokio::main]
@@ -27,19 +28,19 @@ async fn main() {
 	
 	let data_path: String = env::var("DAILYKAENGURU_DATA").expect("Could not fetch DAILYKAENGURU_DATA environment variable");
 	if matches.opt_present("d") {
+	    log::info!("Downloading latest comic");
 	    let datetime = OffsetDateTime::now_utc();
-	    let comic = download_comic(datetime, "https://img.zeit.de/administratives/kaenguru-comics", "original").await;
+	    if let Err(err) = download::download_comic(datetime, "https://img.zeit.de/administratives/kaenguru-comics", "original").await
+		.map(|comic| download::save_comic(comic, datetime, &data_path)) {
+		    log::error!("Could not download latest comic: {}", err);
+		}
 	} else {
+	    log::info!("Starting telegram bot");
 	    let token: String = env::var("DAILYKAENGURU_TOKEN").expect("Could not fetch DAILYKAENGURU_TOKEN environment variable");
-	    bot::handle_updates(token).await;
+
+	    if let Err(err) = bot::handle_updates(token).await {
+		log::error!("Could not handle updates: {}", err);
+	    }
 	}
     }
-}
-
-
-async fn download_comic(datetime: OffsetDateTime, base_url: &str, filename: &str) -> Result<Vec<u8>, reqwest::Error> {
-    let url = format!("{}/{}/{}/{}", base_url, datetime.format("%Y-%m"), datetime.format("%d"), filename);
-    let response = reqwest::get(url.as_str()).await?;
-    let bytes = response.bytes().await?;
-    Ok(bytes.to_vec())
 }
