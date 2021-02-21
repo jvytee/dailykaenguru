@@ -67,3 +67,11 @@ async fn stop_cmd(api: &Api, message: Message) -> Result<(), Error> {
 
     Ok(())
 }
+
+
+async fn download_comic(datetime: OffsetDateTime, base_url: &str, filename: &str) -> Result<Vec<u8>, reqwest::Error> {
+    let url = format!("{}/{}/{}/{}", base_url, datetime.format("%Y-%m"), datetime.format("%d"), filename);
+    let response = reqwest::get(url.as_str()).await?;
+    let bytes = response.bytes().await?;
+    Ok(bytes.to_vec())
+}
