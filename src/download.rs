@@ -1,10 +1,10 @@
-use time::OffsetDateTime;
+use chrono::prelude::*;
 use std::fs;
 use std::io::Error;
 use std::path::Path;
 
 
-pub async fn download_comic(datetime: OffsetDateTime, base_url: &str, filename: &str) -> Result<Vec<u8>, reqwest::Error> {
+pub async fn download_comic(datetime: DateTime<Local>, base_url: &str, filename: &str) -> Result<Vec<u8>, reqwest::Error> {
     let url = format!("{}/{}/{}/{}", base_url, datetime.format("%Y-%m"), datetime.format("%d"), filename);
     let response = reqwest::get(url.as_str()).await?;
 
@@ -18,8 +18,8 @@ pub async fn download_comic(datetime: OffsetDateTime, base_url: &str, filename: 
 }
 
 
-pub fn save_comic(comic: Vec<u8>, datetime: OffsetDateTime, data_path: &str) -> Result<(), Error> {
-    let filename = format!("comic_{}.webp", datetime.format("%Y-%m-%d"));
+pub fn save_comic(comic: Vec<u8>, datetime: DateTime<Local>, data_path: &str) -> Result<(), Error> {
+    let filename = format!("kaenguru_{}.webp", datetime.format("%Y-%m-%d"));
     let filepath = Path::new(data_path).join(filename);
     fs::write(filepath.as_path(), comic)
 }

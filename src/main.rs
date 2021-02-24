@@ -3,11 +3,7 @@ mod download;
 
 use getopts::Options;
 use std::env;
-use time::{
-    date,
-    Date,
-    OffsetDateTime
-};
+use chrono::prelude::*;
 
 
 #[tokio::main]
@@ -29,7 +25,8 @@ async fn main() {
 	let data_path: String = env::var("DAILYKAENGURU_DATA").expect("Could not fetch DAILYKAENGURU_DATA environment variable");
 	if matches.opt_present("d") {
 	    log::info!("Downloading latest comic");
-	    let datetime = OffsetDateTime::now_utc();
+	    let datetime = Local::now();
+
 	    if let Err(err) = download::download_comic(datetime, "https://img.zeit.de/administratives/kaenguru-comics", "original").await
 		.map(|comic| download::save_comic(comic, datetime, &data_path)) {
 		    log::error!("Could not download latest comic: {}", err);
