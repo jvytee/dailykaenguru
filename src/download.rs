@@ -23,3 +23,15 @@ pub fn save_comic(comic: Vec<u8>, datetime: DateTime<Local>, data_path: &str) ->
     let filepath = Path::new(data_path).join(filename);
     fs::write(filepath.as_path(), comic)
 }
+
+
+pub fn load_comic(datetime: DateTime<Local>, data_path: &str) -> Result<Option<Vec<u8>>, Error> {
+    let filename = format!("kaenguru_{}.webp", datetime.format("%Y-%m-%d"));
+    let filepath = Path::new(data_path).join(filename);
+
+    return if filepath.exists() {
+	fs::read(filepath.as_path()).map(|bytes| Some(bytes))
+    } else {
+	Ok(None)
+    }
+}
