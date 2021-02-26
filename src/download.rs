@@ -4,6 +4,19 @@ use std::io::Error;
 use std::path::Path;
 
 
+pub async fn get_comic(datetime: DateTime<Local>, data_path: &str, base_url: &str, filename: &str) -> Option<Vec<u8>> {
+    return if let Ok(comic) = load_comic(datetime, data_path) {
+	if comic.is_some() {
+	    comic
+	} else {
+	    download_comic(datetime, base_url, filename).await.ok()
+	}
+    } else {
+	None
+    }
+}
+
+
 pub async fn download_comic(datetime: DateTime<Local>, base_url: &str, filename: &str) -> Result<Vec<u8>, reqwest::Error> {
     let url = format!("{}/{}/{}/{}", base_url, datetime.format("%Y-%m"), datetime.format("%d"), filename);
     let response = reqwest::get(url.as_str()).await?;
