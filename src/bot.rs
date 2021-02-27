@@ -2,6 +2,11 @@ use log::{
     debug,
     info
 };
+use std::collections::HashSet;
+use std::sync::{
+    Arc,
+    Mutex
+};
 use telegram_bot::{
     prelude::*,
     Api,
@@ -13,10 +18,13 @@ use telegram_bot::{
 };
 use tokio_stream::StreamExt;
 
+type ChatCache = Arc<Mutex<HashSet<MessageChat>>>;
+
 
 pub async fn handle_updates(token: String) -> Result<(), Error> {
     let api = Api::new(token);
     let mut stream = api.stream();
+    let chat_cache: ChatCache = Arc::new(Mutex::new(HashSet::new()));
 
     while let Some(update) = stream.next().await {
 	let update = update?;
@@ -24,8 +32,8 @@ pub async fn handle_updates(token: String) -> Result<(), Error> {
 	if let UpdateKind::Message(message) = update.kind {
 	    if let MessageKind::Text { ref data, .. } = message.kind {
 		match data.as_str() {
-		    "/start" => start_cmd(&api, message).await?,
-		    "/stop" => stop_cmd(&api, message).await?,
+		    "/start" => start_cmd(&api, chat_cache.clone(), message).await?,
+		    "/stop" => stop_cmd(&api, chat_cache.clone(), message).await?,
 		    _ => ()
 		}
 	    }
@@ -36,29 +44,35 @@ pub async fn handle_updates(token: String) -> Result<(), Error> {
 }
 
 
-async fn start_cmd(api: &Api, message: Message) -> Result<(), Error> {
+async fn start_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<(), Error> {
     let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
 
     info!("Starting delivery to {} in chat {}", username, chat.id());
-    api.send(chat.text("Hallo!")).await?;
+    if let Ok(mut chats) = chat_cache.lock() {
+	chats.insert(chat.clone());
+    }
 
+    api.send(chat.text("Hallo!")).await?;
     Ok(())
 }
 
 
-async fn stop_cmd(api: &Api, message: Message) -> Result<(), Error> {
+async fn stop_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<(), Error> {
     let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
 
     info!("Stopping delivery to {} in chat {}", username, chat.id());
-    api.send(chat.text("Ciao!")).await?;
+    if let Ok(mut chats) = chat_cache.lock() {
+	chats.remove(&chat);
+    }
 
     match chat {
 	MessageChat::Private(_) => debug!("Cannot leave private chat"),
 	_ => api.send(chat.leave()).await?
     }
 
+    api.send(chat.text("Ciao!")).await?;
     Ok(())
 }
 
