@@ -27,10 +27,9 @@ async fn main() {
 	    log::info!("Downloading latest comic");
 	    let datetime = Local::now();
 
-	    if let Err(err) = download::download_comic(datetime, "https://img.zeit.de/administratives/kaenguru-comics", "original").await
-		.map(|comic| download::save_comic(comic, datetime, &data_path)) {
-		    log::error!("Could not download latest comic: {}", err);
-		}
+	    if let Err(err) = download::get_comic(datetime, &data_path, "https://img.zeit.de/administratives/kaenguru-comics", "original").await {
+		log::error!("Could not get latest comic: {}", err);
+	    }
 	} else {
 	    log::info!("Starting telegram bot");
 	    let token: String = env::var("DAILYKAENGURU_TOKEN").expect("Could not fetch DAILYKAENGURU_TOKEN environment variable");
