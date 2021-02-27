@@ -1,7 +1,3 @@
-use log::{
-    debug,
-    info
-};
 use std::collections::HashSet;
 use std::sync::{
     Arc,
@@ -48,12 +44,22 @@ async fn start_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result
     let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
 
-    info!("Starting delivery to {} in chat {}", username, chat.id());
-    if let Ok(mut chats) = chat_cache.lock() {
-	chats.insert(chat.clone());
+    match chat_cache.lock() {
+	Ok(mut chats) => {
+	    if chats.insert(chat.clone()) {
+		log::info!("Starting delivery to {} in chat {}", username, chat.id());
+		api.send(chat.text("Hallo!")).await?;
+	    } else {
+		log::info!("Already delivering to {} in chat {}", username, chat.id());
+		api.send(chat.text("Schon unterwegs!")).await?;
+	    }
+	}
+	Err(error) => {
+	    log::warn!("Could not lock chat cache: {}", error);
+	    api.send(chat.text("Razupaltuff")).await?;
+	}
     }
 
-    api.send(chat.text("Hallo!")).await?;
     Ok(())
 }
 
@@ -62,13 +68,13 @@ async fn stop_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<
     let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
 
-    info!("Stopping delivery to {} in chat {}", username, chat.id());
+    log::info!("Stopping delivery to {} in chat {}", username, chat.id());
     if let Ok(mut chats) = chat_cache.lock() {
 	chats.remove(&chat);
     }
 
     match chat {
-	MessageChat::Private(_) => debug!("Cannot leave private chat"),
+	MessageChat::Private(_) => log::debug!("Cannot leave private chat"),
 	_ => api.send(chat.leave()).await?
     }
 
