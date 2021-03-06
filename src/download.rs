@@ -2,17 +2,21 @@ use chrono::prelude::*;
 use std::fs;
 use std::path::Path;
 
+pub struct DownloadConfig {
+    pub data_path: String,
+    pub base_url: String,
+    pub filename: String
+}
+
 pub async fn get_comic(
     datetime: DateTime<Local>,
-    data_path: &str,
-    base_url: &str,
-    filename: &str,
+    config: &DownloadConfig
 ) -> Result<Vec<u8>, Error> {
-    return if let Some(comic) = load_comic(datetime, data_path)? {
+    return if let Some(comic) = load_comic(datetime, &config.data_path)? {
         Ok(comic)
     } else {
-        let comic = download_comic(datetime, base_url, filename).await?;
-        save_comic(comic.clone(), datetime, data_path)?;
+        let comic = download_comic(datetime, &config.base_url, &config.filename).await?;
+        save_comic(comic.clone(), datetime, &config.data_path)?;
         Ok(comic)
     };
 }
