@@ -1,7 +1,7 @@
 with import <nixpkgs> {};
 
 stdenv.mkDerivation {
-  name = "koalabot-env";
+  name = "dailykaenguru-env";
   nativeBuildInputs = [
     rustup
     pkg-config
