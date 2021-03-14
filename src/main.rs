@@ -46,8 +46,9 @@ async fn main() {
             log::info!("Starting telegram bot");
             let token: String = env::var("DAILYKAENGURU_TOKEN")
                 .expect("Could not fetch DAILYKAENGURU_TOKEN environment variable");
+            let delivery_time = NaiveTime::from_hms(9, 30, 0);
 
-            if let Err(err) = bot::handle_updates(token, download_config).await {
+            if let Err(err) = bot::handle_updates(token, download_config, delivery_time).await {
                 log::error!("Could not handle updates: {}", err);
             }
         }

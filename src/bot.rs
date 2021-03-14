@@ -56,15 +56,15 @@ fn seconds_remaining(delivery_time: NaiveTime) -> u64 {
     }
 }
 
-pub async fn handle_updates(token: String, config: DownloadConfig) -> Result<(), Error> {
+pub async fn handle_updates(token: String, config: DownloadConfig, delivery_time: NaiveTime) -> Result<(), Error> {
     let chat_cache: ChatCache = Arc::new(Mutex::new(HashSet::new()));
     let api = Api::new(token);
     let mut stream = api.stream();
 
     let api_copy = api.clone();
     let chat_cache_copy = chat_cache.clone();
-    let delivery_handle = tokio::spawn(async move {
-	deliver_comic(&api_copy, chat_cache_copy, NaiveTime::from_hms(21, 40, 00), &config).await;
+    tokio::spawn(async move {
+	deliver_comic(&api_copy, chat_cache_copy, delivery_time, &config).await;
     });
 
     while let Some(update) = stream.next().await {
@@ -81,7 +81,6 @@ pub async fn handle_updates(token: String, config: DownloadConfig) -> Result<(),
 	}
     }
 
-    tokio::join!(delivery_handle);
     Ok(())
 }
 
