@@ -1,12 +1,9 @@
 with import <nixpkgs> {};
 
-stdenv.mkDerivation {
-  name = "dailykaenguru-env";
-  nativeBuildInputs = [
+mkShell {
+  buildInputs = [
     rustup
     pkg-config
-  ];
-  buildInputs = [
     openssl
   ];
 }
