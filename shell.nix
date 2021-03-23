@@ -11,4 +11,9 @@ stdenv.mkDerivation {
   buildInputs = [
     openssl
   ];
+
+  RUST_LOG = "info";
+  DAILYKAENGURU_DATA = "data/";
+  DAILYKAENGURU_TOKEN = "";
+  DAILYKAENGURU_DELIVERY = "10:30";
 }
