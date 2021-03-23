@@ -2,6 +2,8 @@ use crate::download::{self, DownloadConfig};
 
 use chrono::{Duration, Local, NaiveTime};
 use std::collections::HashSet;
+use std::fs::File;
+use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
 use telegram_bot::{
     prelude::*, Api, ChatId, Error, InputFileUpload, Message, MessageChat, MessageKind, SendPhoto,
@@ -64,7 +66,11 @@ pub async fn handle_updates(
     config: DownloadConfig,
     delivery_time: NaiveTime,
 ) -> Result<(), Error> {
-    let chat_cache: ChatCache = Arc::new(Mutex::new(HashSet::new()));
+    let chat_ids = match load_chat_cache("data/chats.json") {
+        Ok(chat_ids) => chat_ids,
+        Err(_) => HashSet::new()
+    };
+    let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
     let api = Api::new(token);
     let mut stream = api.stream();
 
@@ -98,6 +104,9 @@ async fn start_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result
     match chat_cache.lock() {
         Ok(mut chats) => {
             if chats.insert(chat.id()) {
+                if let Err(error) = dump_chat_cache("./data/chats.json", chats.clone()) {
+                    log::error!("Could not dump chat cache: {}", error);
+                }
                 log::info!("Starting delivery to {} in chat {}", username, chat.id());
                 api.send(chat.text("Hallo!")).await?;
             } else {
@@ -121,6 +130,9 @@ async fn stop_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<
     log::info!("Stopping delivery to {} in chat {}", username, chat.id());
     if let Ok(mut chats) = chat_cache.lock() {
         chats.remove(&chat.id());
+        if let Err(error) = dump_chat_cache("./data/chats.json", chats.clone()) {
+            log::error!("Could not dump chat cache: {}", error);
+        }
     }
 
     match chat {
@@ -130,4 +142,21 @@ async fn stop_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<
 
     api.send(chat.text("Ciao!")).await?;
     Ok(())
+}
+
+
+fn load_chat_cache(file_path: &str) -> Result<HashSet<ChatId>, std::io::Error> {
+    let file = File::open(file_path)?;
+    serde_json::from_reader(file)
+        .map(|chat_ids: Vec<ChatId>| HashSet::from_iter(chat_ids))
+        .map_err(|err| std::io::Error::from(err))
+}
+
+
+fn dump_chat_cache(file_path: &str, chat_cache: HashSet<ChatId>) -> Result<(), std::io::Error> {
+    let chat_ids: Vec<ChatId> = Vec::from_iter(chat_cache);
+
+    let file = File::create(file_path)?;
+    serde_json::to_writer(file, &chat_ids)
+        .map_err(|err| std::io::Error::from(err))
 }
