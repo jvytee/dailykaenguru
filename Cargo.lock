@@ -100,6 +100,8 @@ dependencies = [
  "getopts",
  "log",
  "reqwest",
+ "serde",
+ "serde_json",
  "telegram-bot",
  "tokio",
  "tokio-stream",
