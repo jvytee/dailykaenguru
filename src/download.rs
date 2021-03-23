@@ -5,12 +5,12 @@ use std::path::Path;
 pub struct DownloadConfig {
     pub data_path: String,
     pub base_url: String,
-    pub filename: String
+    pub filename: String,
 }
 
 pub async fn get_comic(
     datetime: DateTime<Local>,
-    config: &DownloadConfig
+    config: &DownloadConfig,
 ) -> Result<Vec<u8>, Error> {
     return if let Some(comic) = load_comic(datetime, &config.data_path)? {
         Ok(comic)

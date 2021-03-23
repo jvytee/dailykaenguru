@@ -24,22 +24,17 @@ async fn main() {
 
         let data_path: String = env::var("DAILYKAENGURU_DATA")
             .expect("Could not fetch DAILYKAENGURU_DATA environment variable");
-	let download_config = DownloadConfig {
-	    data_path: data_path,
-	    base_url: "https://img.zeit.de/administratives/kaenguru-comic".to_string(),
-	    filename: "original".to_string()
-	};
+        let download_config = DownloadConfig {
+            data_path: data_path,
+            base_url: "https://img.zeit.de/administratives/kaenguru-comic".to_string(),
+            filename: "original".to_string(),
+        };
 
         if matches.opt_present("d") {
             log::info!("Downloading latest comic");
             let datetime = Local::now();
 
-            if let Err(err) = download::get_comic(
-                datetime,
-		&download_config
-            )
-            .await
-            {
+            if let Err(err) = download::get_comic(datetime, &download_config).await {
                 log::error!("Could not get latest comic: {}", err);
             }
         } else {

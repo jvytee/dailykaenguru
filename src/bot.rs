@@ -68,7 +68,7 @@ pub async fn handle_updates(
 ) -> Result<(), Error> {
     let chat_ids = match load_chat_cache("data/chats.json") {
         Ok(chat_ids) => chat_ids,
-        Err(_) => HashSet::new()
+        Err(_) => HashSet::new(),
     };
     let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
     let api = Api::new(token);
@@ -144,7 +144,6 @@ async fn stop_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<
     Ok(())
 }
 
-
 fn load_chat_cache(file_path: &str) -> Result<HashSet<ChatId>, std::io::Error> {
     let file = File::open(file_path)?;
     serde_json::from_reader(file)
@@ -152,11 +151,9 @@ fn load_chat_cache(file_path: &str) -> Result<HashSet<ChatId>, std::io::Error> {
         .map_err(|err| std::io::Error::from(err))
 }
 
-
 fn dump_chat_cache(file_path: &str, chat_cache: HashSet<ChatId>) -> Result<(), std::io::Error> {
     let chat_ids: Vec<ChatId> = Vec::from_iter(chat_cache);
 
     let file = File::create(file_path)?;
-    serde_json::to_writer(file, &chat_ids)
-        .map_err(|err| std::io::Error::from(err))
+    serde_json::to_writer(file, &chat_ids).map_err(|err| std::io::Error::from(err))
 }
