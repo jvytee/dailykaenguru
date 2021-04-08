@@ -21,8 +21,9 @@ async fn deliver_comic(
     config: &DownloadConfig,
 ) {
     loop {
-        let sleep_duration = time::Duration::from_secs(seconds_remaining(delivery_time));
-        time::sleep(sleep_duration).await;
+        //let sleep_duration = time::Duration::from_secs(seconds_remaining(delivery_time));
+        //time::sleep(sleep_duration).await;
+        time::sleep(time_remaining(delivery_time)).await;
 
         let comic = match download::get_comic(Local::now(), &config).await {
             Ok(content) => InputFileUpload::with_data(content, "känguru.jpg"),
@@ -58,6 +59,16 @@ fn seconds_remaining(delivery_time: NaiveTime) -> u64 {
         (duration + Duration::hours(24)).num_seconds() as u64
     } else {
         duration.num_seconds() as u64
+    }
+}
+
+fn time_remaining(delivery_time: NaiveTime) -> time::Duration {
+    let delivery_datetime = Local::today().and_time(delivery_time).unwrap();
+    let duration = delivery_datetime.signed_duration_since(Local::now());
+
+    match duration.to_std() {
+        Ok(duration) => duration,
+        Err(_) => (duration + Duration::hours(24)).to_std().unwrap()
     }
 }
 
