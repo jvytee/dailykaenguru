@@ -14,6 +14,43 @@ use tokio_stream::StreamExt;
 
 type ChatCache = Arc<Mutex<HashSet<ChatId>>>;
 
+pub async fn handle_updates(
+    token: String,
+    config: DownloadConfig,
+    delivery_time: NaiveTime,
+    cache_path: &str
+) -> Result<(), Error> {
+    let chat_ids = match load_chat_cache(cache_path) {
+        Ok(chat_ids) => chat_ids,
+        Err(_) => HashSet::new(),
+    };
+    let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
+    let api = Api::new(token);
+    let mut stream = api.stream();
+
+    let api_copy = api.clone();
+    let chat_cache_copy = chat_cache.clone();
+    tokio::spawn(async move {
+        deliver_comic(&api_copy, chat_cache_copy, delivery_time, &config).await;
+    });
+
+    while let Some(update) = stream.next().await {
+        let update = update?;
+
+        if let UpdateKind::Message(message) = update.kind {
+            if let MessageKind::Text { ref data, .. } = message.kind {
+                match data.as_str() {
+                    "/start" => start_cmd(&api, chat_cache.clone(), cache_path, message).await?,
+                    "/stop" => stop_cmd(&api, chat_cache.clone(), cache_path, message).await?,
+                    _ => (),
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 async fn deliver_comic(
     api: &Api,
     chat_cache: ChatCache,
@@ -72,50 +109,14 @@ fn time_remaining(delivery_time: NaiveTime) -> time::Duration {
     }
 }
 
-pub async fn handle_updates(
-    token: String,
-    config: DownloadConfig,
-    delivery_time: NaiveTime,
-) -> Result<(), Error> {
-    let chat_ids = match load_chat_cache("data/chats.json") {
-        Ok(chat_ids) => chat_ids,
-        Err(_) => HashSet::new(),
-    };
-    let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
-    let api = Api::new(token);
-    let mut stream = api.stream();
-
-    let api_copy = api.clone();
-    let chat_cache_copy = chat_cache.clone();
-    tokio::spawn(async move {
-        deliver_comic(&api_copy, chat_cache_copy, delivery_time, &config).await;
-    });
-
-    while let Some(update) = stream.next().await {
-        let update = update?;
-
-        if let UpdateKind::Message(message) = update.kind {
-            if let MessageKind::Text { ref data, .. } = message.kind {
-                match data.as_str() {
-                    "/start" => start_cmd(&api, chat_cache.clone(), message).await?,
-                    "/stop" => stop_cmd(&api, chat_cache.clone(), message).await?,
-                    _ => (),
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
-async fn start_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<(), Error> {
+async fn start_cmd(api: &Api, chat_cache: ChatCache, cache_path: &str, message: Message) -> Result<(), Error> {
     let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
 
     match chat_cache.lock() {
         Ok(mut chats) => {
             if chats.insert(chat.id()) {
-                if let Err(error) = dump_chat_cache("./data/chats.json", chats.clone()) {
+                if let Err(error) = dump_chat_cache(cache_path, chats.clone()) {
                     log::error!("Could not dump chat cache: {}", error);
                 }
                 log::info!("Starting delivery to {} in chat {}", username, chat.id());
@@ -134,14 +135,14 @@ async fn start_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result
     Ok(())
 }
 
-async fn stop_cmd(api: &Api, chat_cache: ChatCache, message: Message) -> Result<(), Error> {
+async fn stop_cmd(api: &Api, chat_cache: ChatCache, cache_path: &str, message: Message) -> Result<(), Error> {
     let username = message.from.username.unwrap_or("people".to_string());
     let chat = message.chat;
 
     log::info!("Stopping delivery to {} in chat {}", username, chat.id());
     if let Ok(mut chats) = chat_cache.lock() {
         chats.remove(&chat.id());
-        if let Err(error) = dump_chat_cache("./data/chats.json", chats.clone()) {
+        if let Err(error) = dump_chat_cache(cache_path, chats.clone()) {
             log::error!("Could not dump chat cache: {}", error);
         }
     }

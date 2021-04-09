@@ -26,7 +26,7 @@ async fn main() {
             .expect("Could not fetch DAILYKAENGURU_DATA environment variable");
         let download_config = DownloadConfig {
             data_path: data_path,
-            base_url: "https://img.zeit.de/administratives/kaenguru-comic".to_string(),
+            base_url: "https://img.zeit.de/administratives/kaenguru-comics".to_string(),
             filename: "original".to_string(),
         };
 
@@ -47,7 +47,7 @@ async fn main() {
                 .unwrap_or(Ok(NaiveTime::from_hms(9, 30, 0)))
                 .expect("Could not parse DAILYKAENGURU_DELIVERY environment variable");
 
-            if let Err(err) = bot::handle_updates(token, download_config, delivery_time).await {
+            if let Err(err) = bot::handle_updates(token, download_config, delivery_time, "data/chats.json").await {
                 log::error!("Could not handle updates: {}", err);
             }
         }
