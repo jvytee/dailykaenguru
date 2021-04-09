@@ -152,7 +152,6 @@ fn load_chat_cache(file_path: &str) -> Result<HashSet<ChatId>, std::io::Error> {
 
 fn dump_chat_cache(file_path: &str, chat_cache: HashSet<ChatId>) -> Result<(), std::io::Error> {
     let chat_ids: Vec<ChatId> = Vec::from_iter(chat_cache);
-
     let file = File::create(file_path)?;
     serde_json::to_writer(file, &chat_ids).map_err(|err| std::io::Error::from(err))
 }

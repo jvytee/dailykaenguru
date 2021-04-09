@@ -5,6 +5,7 @@ use chrono::prelude::*;
 use download::DownloadConfig;
 use getopts::Options;
 use std::env;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() {
@@ -25,7 +26,7 @@ async fn main() {
         let data_path: String = env::var("DAILYKAENGURU_DATA")
             .expect("Could not fetch DAILYKAENGURU_DATA environment variable");
         let download_config = DownloadConfig {
-            data_path: data_path,
+            data_path: data_path.clone(),
             base_url: "https://img.zeit.de/administratives/kaenguru-comics".to_string(),
             filename: "original".to_string(),
         };
@@ -47,7 +48,12 @@ async fn main() {
                 .unwrap_or(Ok(NaiveTime::from_hms(9, 30, 0)))
                 .expect("Could not parse DAILYKAENGURU_DELIVERY environment variable");
 
-            if let Err(err) = bot::handle_updates(token, download_config, delivery_time, "data/chats.json").await {
+            let cache_path = Path::new(&data_path).join("chats.json")
+                .to_str()
+                .unwrap_or("chats.json")
+                .to_string();
+
+            if let Err(err) = bot::handle_updates(token, download_config, delivery_time, &cache_path).await {
                 log::error!("Could not handle updates: {}", err);
             }
         }
