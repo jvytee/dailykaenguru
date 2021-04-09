@@ -58,8 +58,6 @@ async fn deliver_comic(
     config: &DownloadConfig,
 ) {
     loop {
-        //let sleep_duration = time::Duration::from_secs(seconds_remaining(delivery_time));
-        //time::sleep(sleep_duration).await;
         time::sleep(time_remaining(delivery_time)).await;
 
         let comic = match download::get_comic(Local::now(), &config).await {
@@ -85,17 +83,6 @@ async fn deliver_comic(
                 .await
                 .map_err(|error| log::warn!("Could not deliver comic: {}", error));
         }
-    }
-}
-
-fn seconds_remaining(delivery_time: NaiveTime) -> u64 {
-    let delivery_datetime = Local::today().and_time(delivery_time).unwrap();
-    let duration = delivery_datetime.signed_duration_since(Local::now());
-
-    if duration.num_seconds() < 0 {
-        (duration + Duration::hours(24)).num_seconds() as u64
-    } else {
-        duration.num_seconds() as u64
     }
 }
 
