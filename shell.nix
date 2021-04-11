@@ -1,14 +1,13 @@
 with import <nixpkgs> {};
 
-stdenv.mkDerivation {
-  name = "dailykaenguru-env";
+mkShell {
   nativeBuildInputs = [
-    rust-analyzer
-    rustup
+    rustc
+    cargo
     pkgconfig
-    openssl
   ];
   buildInputs = [
+    cacert
     openssl
   ];
 
