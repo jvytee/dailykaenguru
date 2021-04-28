@@ -2,9 +2,9 @@ with import <nixpkgs> {};
 
 mkShell {
   nativeBuildInputs = [
-    rustc
-    cargo
+    latest.rustChannels.stable.rust
     pkgconfig
+    rust-analyzer
   ];
   buildInputs = [
     cacert
