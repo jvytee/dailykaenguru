@@ -1,3 +1,5 @@
+use crate::error::Error;
+
 use chrono::prelude::*;
 use std::fs;
 use std::path::Path;
@@ -68,31 +70,3 @@ fn load_comic(
     };
 }
 
-#[derive(Debug)]
-pub enum Error {
-    IoError(std::io::Error),
-    HttpError(reqwest::Error),
-}
-
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::IoError(io_error) => write!(f, "IO error: {}", io_error.to_string()),
-            Self::HttpError(http_error) => write!(f, "HTTP error: {}", http_error.to_string()),
-        }
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(error: std::io::Error) -> Self {
-        Error::IoError(error)
-    }
-}
-
-impl From<reqwest::Error> for Error {
-    fn from(error: reqwest::Error) -> Self {
-        Error::HttpError(error)
-    }
-}

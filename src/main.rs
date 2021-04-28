@@ -1,8 +1,10 @@
 mod bot;
+mod error;
 mod download;
 
 use chrono::prelude::*;
 use download::DownloadConfig;
+use error::Error;
 use getopts::Options;
 use std::env;
 use std::path::Path;
@@ -11,6 +13,12 @@ use std::path::Path;
 async fn main() {
     env_logger::init();
 
+    if let Err(error) = init().await {
+        log::error!("{}", error);
+    };
+}
+
+async fn init() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
     let mut opts = Options::new();
     opts.optflag("h", "help", "Show help");
@@ -20,7 +28,7 @@ async fn main() {
         if matches.opt_present("h") {
             let brief = format!("Usage: {} [OPTIONS]", &args[0]);
             println!("{}", opts.usage(&brief));
-            return;
+            return Ok(());
         }
 
         let data_path: String = env::var("DAILYKAENGURU_DATA")
@@ -35,9 +43,7 @@ async fn main() {
             log::info!("Downloading latest comic");
             let datetime = Local::now();
 
-            if let Err(err) = download::get_comic(datetime, &download_config).await {
-                log::error!("Could not get latest comic: {}", err);
-            }
+            download::get_comic(datetime, &download_config).await?;
         } else {
             log::info!("Starting telegram bot");
             let token: String = env::var("DAILYKAENGURU_TOKEN")
@@ -53,9 +59,9 @@ async fn main() {
                 .unwrap_or("chats.json")
                 .to_string();
 
-            if let Err(err) = bot::handle_updates(token, download_config, delivery_time, &cache_path).await {
-                log::error!("Could not handle updates: {}", err);
-            }
+            bot::handle_updates(token, download_config, delivery_time, &cache_path).await?;
         }
     }
+
+    Ok(())
 }
