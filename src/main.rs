@@ -31,8 +31,8 @@ async fn init() -> Result<(), Error> {
             return Ok(());
         }
 
-        let data_path: String = env::var("DAILYKAENGURU_DATA")
-            .expect("Could not fetch DAILYKAENGURU_DATA environment variable");
+        let data_path: String = env::var("DAILYKAENGURU_DATA")?;
+            //.expect("Could not fetch DAILYKAENGURU_DATA environment variable");
         let download_config = DownloadConfig {
             data_path: data_path.clone(),
             base_url: "https://img.zeit.de/administratives/kaenguru-comics".to_string(),
@@ -46,13 +46,13 @@ async fn init() -> Result<(), Error> {
             download::get_comic(datetime, &download_config).await?;
         } else {
             log::info!("Starting telegram bot");
-            let token: String = env::var("DAILYKAENGURU_TOKEN")
-                .expect("Could not fetch DAILYKAENGURU_TOKEN environment variable");
+            let token: String = env::var("DAILYKAENGURU_TOKEN")?;
+                //.expect("Could not fetch DAILYKAENGURU_TOKEN environment variable");
 
             let delivery_time = env::var("DAILYKAENGURU_DELIVERY")
                 .map(|delivery_string| NaiveTime::parse_from_str(&delivery_string, "%H:%M"))
-                .unwrap_or(Ok(NaiveTime::from_hms(9, 30, 0)))
-                .expect("Could not parse DAILYKAENGURU_DELIVERY environment variable");
+                .unwrap_or(Ok(NaiveTime::from_hms(9, 30, 0)))?;
+                //.expect("Could not parse DAILYKAENGURU_DELIVERY environment variable");
 
             let cache_path = Path::new(&data_path).join("chats.json")
                 .to_str()
