@@ -1,4 +1,4 @@
-FROM rust:1.52-alpine3.13 AS builder
+FROM docker.io/library/rust:1.52-alpine3.13 AS builder
 
 ARG src=/usr/local/src/dailykaenguru
 RUN apk update && apk add build-base openssl-dev pkgconf
@@ -7,7 +7,7 @@ COPY Cargo.toml Cargo.lock $src/
 COPY src $src/src
 RUN cargo install --path $src
 
-FROM alpine:3.13
+FROM docker.io/library/alpine:3.13
 
 ENV RUST_LOG=info
 ENV DAILYKAENGURU_DATA=/var/lib/dailykaenguru
