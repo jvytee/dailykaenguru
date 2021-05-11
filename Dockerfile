@@ -15,7 +15,7 @@ ENV DAILYKAENGURU_DELIVERY=09:30
 ENV DAILYKAENGURU_TOKEN=
 
 RUN apk update && apk add ca-certificates openssl
-RUN addgroup -S dailykaenguru && adduser -G dailykaenguru -S -H
+RUN addgroup -S dailykaenguru && adduser -G dailykaenguru -S -H dailykaenguru
 
 COPY --from=builder /usr/local/cargo/bin/dailykaenguru /usr/local/bin/dailykaenguru
 
