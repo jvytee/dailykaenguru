@@ -2,9 +2,9 @@ with import <nixpkgs> {};
 
 mkShell {
   nativeBuildInputs = [
-    latest.rustChannels.stable.rust
     pkgconfig
     rust-analyzer
+    rustup
   ];
   buildInputs = [
     cacert
@@ -13,6 +13,6 @@ mkShell {
 
   RUST_LOG = "info";
   DAILYKAENGURU_DATA = "data/";
-  DAILYKAENGURU_TOKEN = "";
   DAILYKAENGURU_DELIVERY = "10:30";
+  DAILYKAENGURU_TOKEN = "";
 }
