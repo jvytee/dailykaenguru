@@ -18,6 +18,7 @@ RUN apk update && apk add ca-certificates openssl
 RUN addgroup -S dailykaenguru && adduser -G dailykaenguru -S -H dailykaenguru
 
 COPY --from=builder /usr/local/cargo/bin/dailykaenguru /usr/local/bin/dailykaenguru
+RUN mkdir -p $DAILYKAENGURU_DATA && chown dailykaenguru:dailykaenguru $DAILYKAENGURU_DATA
 
 USER dailykaenguru
 CMD dailykaenguru
