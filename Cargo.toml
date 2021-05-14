@@ -14,6 +14,7 @@ log = "0.4"
 reqwest = "0.11"
 serde = "1.0"
 serde_json = "1.0"
-telegram-bot = { git = "https://github.com/telegram-rs/telegram-bot.git" }
+# telegram-bot = { git = "https://github.com/telegram-rs/telegram-bot.git" }
+teloxide = { version = "0.4", features = ["auto-send", "macros"] }
 tokio = { version = "1", features = ["rt-multi-thread", "time", "macros"] }
 tokio-stream = "0.1"
