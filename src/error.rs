@@ -2,7 +2,6 @@
 pub enum Error {
     IoError(std::io::Error),
     HttpError(reqwest::Error),
-    TelegramError(telegram_bot::Error),
     VarError(std::env::VarError),
     ParseError(chrono::ParseError)
 }
@@ -12,7 +11,6 @@ impl std::fmt::Display for Error {
         match self {
             Self::IoError(error) => write!(f, "IO error: {}", error),
             Self::HttpError(error) => write!(f, "HTTP error: {}", error),
-            Self::TelegramError(error) => write!(f, "Telegram error: {}", error),
             Self::VarError(error) => write!(f, "Variable error: {}", error),
             Self::ParseError(error) => write!(f, "Parse error: {}", error)
         }
@@ -30,12 +28,6 @@ impl From<std::io::Error> for Error {
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
         Error::HttpError(error)
-    }
-}
-
-impl From<telegram_bot::Error> for Error {
-    fn from(error: telegram_bot::Error) -> Self {
-        Error::TelegramError(error)
     }
 }
 

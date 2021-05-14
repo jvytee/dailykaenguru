@@ -1,20 +1,24 @@
 use crate::download::{self, DownloadConfig};
+use crate::error::Error;
 
 use chrono::{Duration, Local, NaiveTime};
 use std::collections::HashSet;
 use std::fs::File;
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
-use telegram_bot::{
-    prelude::*, Api, ChatId, Error, InputFileUpload, Message, MessageChat, MessageKind, SendPhoto,
-    UpdateKind,
+use teloxide::{
+    prelude::*,
+    types::{
+        ChatId,
+        InputFile,
+    },
+    utils::command::BotCommand,
 };
 use tokio::time;
-use tokio_stream::StreamExt;
 
 type ChatCache = Arc<Mutex<HashSet<ChatId>>>;
 
-pub async fn handle_updates(
+pub async fn start_bot<'a>(
     token: String,
     config: DownloadConfig,
     delivery_time: NaiveTime,
@@ -25,34 +29,24 @@ pub async fn handle_updates(
         Err(_) => HashSet::new(),
     };
     let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
-    let api = Api::new(token);
-    let mut stream = api.stream();
+    let bot = Bot::new(token).auto_send();
 
-    let api_copy = api.clone();
+    let bot_copy = bot.clone();
     let chat_cache_copy = chat_cache.clone();
     tokio::spawn(async move {
-        deliver_comic(&api_copy, chat_cache_copy, delivery_time, &config).await;
+        deliver_comic(&bot_copy, chat_cache_copy, delivery_time, &config).await;
     });
 
-    while let Some(update) = stream.next().await {
-        let update = update?;
-
-        if let UpdateKind::Message(message) = update.kind {
-            if let MessageKind::Text { ref data, .. } = message.kind {
-                match data.as_str() {
-                    "/start" => start_cmd(&api, chat_cache.clone(), cache_path, message).await?,
-                    "/stop" => stop_cmd(&api, chat_cache.clone(), cache_path, message).await?,
-                    _ => (),
-                }
-            }
-        }
-    }
+    teloxide::commands_repl(bot, "DailyKaenguruBot", |cx, command: Command| async move {
+        answer(&cx, &command, chat_cache_copy, cache_path).await;
+        respond(())
+    });
 
     Ok(())
 }
 
 async fn deliver_comic(
-    api: &Api,
+    bot: &AutoSend<Bot>,
     chat_cache: ChatCache,
     delivery_time: NaiveTime,
     config: &DownloadConfig,
@@ -61,7 +55,7 @@ async fn deliver_comic(
         time::sleep(time_remaining(delivery_time)).await;
 
         let comic = match download::get_comic(Local::now(), &config).await {
-            Ok(content) => InputFileUpload::with_data(content, "känguru.jpg"),
+            Ok(content) => InputFile::memory("känguru.jpg", content),
             Err(error) => {
                 log::warn!("Could not get comic: {}", error);
                 continue;
@@ -77,11 +71,8 @@ async fn deliver_comic(
         };
 
         for chat in chats.iter() {
-            let send_photo = SendPhoto::new(chat, &comic);
-            let _ = api
-                .send(send_photo)
-                .await
-                .map_err(|error| log::warn!("Could not deliver comic: {}", error));
+            let send_photo = bot.send_photo(chat.to_owned(), comic.to_owned());
+            send_photo.await;
         }
     }
 }
@@ -96,50 +87,69 @@ fn time_remaining(delivery_time: NaiveTime) -> time::Duration {
     }
 }
 
-async fn start_cmd(api: &Api, chat_cache: ChatCache, cache_path: &str, message: Message) -> Result<(), Error> {
-    let username = message.from.username.unwrap_or("people".to_string());
-    let chat = message.chat;
+#[derive(BotCommand)]
+#[command(rename = "lowercase")]
+enum Command {
+    #[command(description = "Startet den Bot")]
+    Start,
+    #[command(description = "Stoppt den Bot")]
+    Stop
+}
 
-    match chat_cache.lock() {
+async fn answer(cx: &UpdateWithCx<AutoSend<Bot>, Message>, command: &Command, chat_cache: ChatCache, cache_path: &str) -> Result<(), Error> {
+    match command {
+        Command::Start => start_cmd(cx, chat_cache, cache_path).await?,
+        Command::Stop => stop_cmd(cx, chat_cache, cache_path).await?
+    };
+    
+    Ok(())
+}
+
+async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCache, cache_path: &str) -> Result<(), Error> {
+    let chat_id = cx.chat_id();
+
+    let answer = match chat_cache.lock() {
         Ok(mut chats) => {
-            if chats.insert(chat.id()) {
+            if chats.insert(chat_id.into()) {
                 if let Err(error) = dump_chat_cache(cache_path, chats.clone()) {
                     log::error!("Could not dump chat cache: {}", error);
                 }
-                log::info!("Starting delivery to {} in chat {}", username, chat.id());
-                api.send(chat.text("Hallo!")).await?;
+                log::info!("Starting delivery to chat {}", chat_id);
+                "Hallo!"
             } else {
-                log::info!("Already delivering to {} in chat {}", username, chat.id());
-                api.send(chat.text("Schon unterwegs!")).await?;
+                log::info!("Already delivering to chat {}", chat_id);
+                "Schon unterwegs!"
             }
         }
         Err(error) => {
             log::warn!("Could not lock chat cache: {}", error);
-            api.send(chat.text("Razupaltuff")).await?;
+            "Razupaltuff."
         }
-    }
+    };
 
+    cx.answer(answer).await;
     Ok(())
 }
 
-async fn stop_cmd(api: &Api, chat_cache: ChatCache, cache_path: &str, message: Message) -> Result<(), Error> {
-    let username = message.from.username.unwrap_or("people".to_string());
-    let chat = message.chat;
+async fn stop_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCache, cache_path: &str) -> Result<(), Error> {
+    let chat = &cx.update.chat;
 
-    log::info!("Stopping delivery to {} in chat {}", username, chat.id());
+    log::info!("Stopping delivery to chat {}", chat.id);
     if let Ok(mut chats) = chat_cache.lock() {
-        chats.remove(&chat.id());
+        chats.remove(&chat.id.into());
         if let Err(error) = dump_chat_cache(cache_path, chats.clone()) {
             log::error!("Could not dump chat cache: {}", error);
         }
     }
 
-    match chat {
-        MessageChat::Private(_) => log::debug!("Cannot leave private chat"),
-        _ => api.send(chat.leave()).await?,
+    
+    if chat.is_private() {
+        log::debug!("Cannot leave private chat");
+    } else {
+        cx.requester.leave_chat(chat.id).await;
     }
 
-    api.send(chat.text("Ciao!")).await?;
+    cx.answer("Ciao!").await;
     Ok(())
 }
 

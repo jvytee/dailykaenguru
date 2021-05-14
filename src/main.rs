@@ -13,12 +13,12 @@ use std::path::Path;
 async fn main() {
     env_logger::init();
 
-    if let Err(error) = init().await {
+    if let Err(error) = run().await {
         log::error!("{}", error);
     };
 }
 
-async fn init() -> Result<(), Error> {
+async fn run() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
     let mut opts = Options::new();
     opts.optflag("h", "help", "Show help");
@@ -59,7 +59,7 @@ async fn init() -> Result<(), Error> {
                 .unwrap_or("chats.json")
                 .to_string();
 
-            bot::handle_updates(token, download_config, delivery_time, &cache_path).await?;
+            bot::start_bot(token, download_config, delivery_time, &cache_path).await?;
         }
     }
 
