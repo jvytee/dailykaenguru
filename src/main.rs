@@ -59,7 +59,7 @@ async fn run() -> Result<(), Error> {
                 .unwrap_or("chats.json")
                 .to_string();
 
-            bot::start_bot(token, download_config, delivery_time, &cache_path).await?;
+            bot::start_bot(token, download_config, delivery_time, cache_path).await?;
         }
     }
 

@@ -18,29 +18,39 @@ use tokio::time;
 
 type ChatCache = Arc<Mutex<HashSet<ChatId>>>;
 
-pub async fn start_bot<'a>(
+pub async fn start_bot(
     token: String,
     config: DownloadConfig,
     delivery_time: NaiveTime,
-    cache_path: &str
+    cache_path: String
 ) -> Result<(), Error> {
-    let chat_ids = match load_chat_cache(cache_path) {
+    let chat_ids = match load_chat_cache(&cache_path) {
         Ok(chat_ids) => chat_ids,
         Err(_) => HashSet::new(),
     };
     let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
     let bot = Bot::new(token).auto_send();
 
-    let bot_copy = bot.clone();
-    let chat_cache_copy = chat_cache.clone();
-    tokio::spawn(async move {
-        deliver_comic(&bot_copy, chat_cache_copy, delivery_time, &config).await;
-    });
+    {
+        let bot= bot.clone();
+        let chat_cache= chat_cache.clone();
+        tokio::spawn(async move {
+            deliver_comic(&bot, chat_cache, delivery_time, &config).await;
+        });
+    }
 
-    teloxide::commands_repl(bot, "DailyKaenguruBot", |cx, command: Command| async move {
-        answer(&cx, &command, chat_cache_copy, cache_path).await;
-        respond(())
-    });
+    teloxide::commands_repl(bot, "DailyKaenguruBot", move |cx, command: Command| {
+        let chat_cache = chat_cache.clone();
+        let cache_path = cache_path.clone();
+
+        async move {
+            match command {
+                Command::Start => start_cmd(&cx, &chat_cache, &cache_path).await,
+                Command::Stop => stop_cmd(&cx, &chat_cache, &cache_path).await
+            };
+            respond(())
+        }
+    }).await;
 
     Ok(())
 }
@@ -96,16 +106,7 @@ enum Command {
     Stop
 }
 
-async fn answer(cx: &UpdateWithCx<AutoSend<Bot>, Message>, command: &Command, chat_cache: ChatCache, cache_path: &str) -> Result<(), Error> {
-    match command {
-        Command::Start => start_cmd(cx, chat_cache, cache_path).await?,
-        Command::Stop => stop_cmd(cx, chat_cache, cache_path).await?
-    };
-    
-    Ok(())
-}
-
-async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCache, cache_path: &str) -> Result<(), Error> {
+async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), Error> {
     let chat_id = cx.chat_id();
 
     let answer = match chat_cache.lock() {
@@ -131,7 +132,7 @@ async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCa
     Ok(())
 }
 
-async fn stop_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCache, cache_path: &str) -> Result<(), Error> {
+async fn stop_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), Error> {
     let chat = &cx.update.chat;
 
     log::info!("Stopping delivery to chat {}", chat.id);
