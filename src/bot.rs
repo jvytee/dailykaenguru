@@ -6,14 +6,10 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::iter::FromIterator;
 use std::sync::{Arc, Mutex};
-use teloxide::{
-    prelude::*,
-    types::{
+use teloxide::{RequestError, prelude::*, types::{
         ChatId,
         InputFile,
-    },
-    utils::command::BotCommand,
-};
+    }, utils::command::BotCommand};
 use tokio::time;
 
 type ChatCache = Arc<Mutex<HashSet<ChatId>>>;
@@ -47,7 +43,7 @@ pub async fn start_bot(
             match command {
                 Command::Start => start_cmd(&cx, &chat_cache, &cache_path).await,
                 Command::Stop => stop_cmd(&cx, &chat_cache, &cache_path).await
-            };
+            }?;
             respond(())
         }
     }).await;
@@ -82,7 +78,9 @@ async fn deliver_comic(
 
         for chat in chats.iter() {
             let send_photo = bot.send_photo(chat.to_owned(), comic.to_owned());
-            send_photo.await;
+            if let Err(error) = send_photo.await {
+                log::warn!("Could not deliver comic to {}: {}", chat, error);
+            }
         }
     }
 }
@@ -106,7 +104,7 @@ enum Command {
     Stop
 }
 
-async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), Error> {
+async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), RequestError> {
     let chat_id = cx.chat_id();
 
     let answer = match chat_cache.lock() {
@@ -128,11 +126,11 @@ async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatC
         }
     };
 
-    cx.answer(answer).await;
+    cx.answer(answer).await?;
     Ok(())
 }
 
-async fn stop_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), Error> {
+async fn stop_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), RequestError> {
     let chat = &cx.update.chat;
 
     log::info!("Stopping delivery to chat {}", chat.id);
@@ -147,10 +145,10 @@ async fn stop_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCa
     if chat.is_private() {
         log::debug!("Cannot leave private chat");
     } else {
-        cx.requester.leave_chat(chat.id).await;
+        cx.requester.leave_chat(chat.id).await?;
     }
 
-    cx.answer("Ciao!").await;
+    cx.answer("Ciao!").await?;
     Ok(())
 }
 

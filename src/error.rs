@@ -3,7 +3,8 @@ pub enum Error {
     IoError(std::io::Error),
     HttpError(reqwest::Error),
     VarError(std::env::VarError),
-    ParseError(chrono::ParseError)
+    ParseError(chrono::ParseError),
+    RequestError(teloxide::RequestError)
 }
 
 impl std::fmt::Display for Error {
@@ -12,7 +13,8 @@ impl std::fmt::Display for Error {
             Self::IoError(error) => write!(f, "IO error: {}", error),
             Self::HttpError(error) => write!(f, "HTTP error: {}", error),
             Self::VarError(error) => write!(f, "Variable error: {}", error),
-            Self::ParseError(error) => write!(f, "Parse error: {}", error)
+            Self::ParseError(error) => write!(f, "Parse error: {}", error),
+            Self::RequestError(error) => write!(f, "Teloxide request error: {}", error)
         }
     }
 }
@@ -40,5 +42,11 @@ impl From<std::env::VarError> for Error {
 impl From<chrono::ParseError> for Error {
     fn from(error: chrono::ParseError) -> Self {
         Error::ParseError(error)
+    }
+}
+
+impl From<teloxide::RequestError> for Error {
+    fn from(error: teloxide::RequestError) -> Self {
+        Error::RequestError(error)
     }
 }
