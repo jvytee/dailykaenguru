@@ -30,18 +30,20 @@ pub async fn start_bot(
     {
         let bot = bot.clone();
         let chat_cache = chat_cache.clone();
+        let download_config = config.clone();
         tokio::spawn(async move {
-            deliver_comic(&bot, chat_cache, delivery_time, &config).await;
+            deliver_comic(&bot, chat_cache, delivery_time, &download_config).await;
         });
     }
 
     teloxide::commands_repl(bot, "DailyKaenguruBot", move |cx, command: Command| {
         let chat_cache = chat_cache.clone();
         let cache_path = cache_path.clone();
+        let download_config = config.clone();
 
         async move {
             match command {
-                Command::Start => start_cmd(&cx, &chat_cache, &cache_path).await,
+                Command::Start => start_cmd(&cx, &chat_cache, &cache_path, &download_config).await,
                 Command::Stop => stop_cmd(&cx, &chat_cache, &cache_path).await
             }?;
             respond(())
@@ -104,7 +106,7 @@ enum Command {
     Stop
 }
 
-async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str) -> Result<(), RequestError> {
+async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatCache, cache_path: &str, config: &DownloadConfig) -> Result<(), RequestError> {
     let chat_id = cx.chat_id();
 
     let answer = match chat_cache.lock() {
@@ -127,6 +129,14 @@ async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatC
     };
 
     answer.await?;
+    match download::get_comic(Local::now(), &config).await {
+        Ok(content) => {
+            let comic = InputFile::memory("känguru.jpg", content);
+            cx.answer_photo(comic).await?;
+        },
+        Err(error) => log::warn!("Could not get comic: {}", error)
+    }
+
     Ok(())
 }
 
