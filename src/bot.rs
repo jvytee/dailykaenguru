@@ -28,8 +28,8 @@ pub async fn start_bot(
     let bot = Bot::new(token).auto_send();
 
     {
-        let bot= bot.clone();
-        let chat_cache= chat_cache.clone();
+        let bot = bot.clone();
+        let chat_cache = chat_cache.clone();
         tokio::spawn(async move {
             deliver_comic(&bot, chat_cache, delivery_time, &config).await;
         });
@@ -71,7 +71,7 @@ async fn deliver_comic(
         let chats = match chat_cache.lock() {
             Ok(chats) => chats.clone(),
             Err(error) => {
-                log::warn!("Cannot lock chat cache: {}", error);
+                log::warn!("Could not lock chat cache: {}", error);
                 continue;
             }
         };
@@ -114,19 +114,19 @@ async fn start_cmd(cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: &ChatC
                     log::error!("Could not dump chat cache: {}", error);
                 }
                 log::info!("Starting delivery to chat {}", chat_id);
-                "Hallo!"
+                cx.answer("Hallo!")
             } else {
                 log::info!("Already delivering to chat {}", chat_id);
-                "Schon unterwegs!"
+                cx.answer("Schon unterwegs!")
             }
         }
         Err(error) => {
             log::warn!("Could not lock chat cache: {}", error);
-            "Razupaltuff."
+            cx.answer("Razupaltuff.")
         }
     };
 
-    cx.answer(answer).await?;
+    answer.await?;
     Ok(())
 }
 
