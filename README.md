@@ -1,7 +1,7 @@
 # dailykaenguru
 Liefert den täglichen Känguru-Comic von Zeit Online auf Telegram.
 
-This is a telegram bot to deliver the [Känguru-Comic](https://www.zeit.de/serie/die-kaenguru-comics) published everyday by german newspaper [Zeit Online](https://www.zeit.de) directly in the messenger.
+This is a telegram bot to deliver the [Känguru-Comic](https://www.zeit.de/serie/die-kaenguru-comics) published every day by german newspaper [Zeit Online](https://www.zeit.de) directly in the messenger.
 
 ## Installation
 Make sure you have a recent [rust toolchain](https://www.rust-lang.org/tools/install) installed.
