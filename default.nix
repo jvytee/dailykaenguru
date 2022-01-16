@@ -1,32 +1,24 @@
 let
   moz_overlay = import (builtins.fetchTarball https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz);
   nixpkgs = import <nixpkgs> {
-    overlays = [
-      moz_overlay
-    ];
+    overlays = [ moz_overlay ];
     crossSystem = {
       config = "aarch64-unknown-linux-gnu";
     };
   };
+
   latestRustPlatform = nixpkgs.makeRustPlatform {
     rustc = nixpkgs.pkgsBuildHost.latest.rustChannels.stable.rustc;
     cargo = nixpkgs.pkgsBuildHost.latest.rustChannels.stable.cargo;
   };
-in
-  with nixpkgs;
-  latestRustPlatform.buildRustPackage {
+
+  dailykaenguru = with nixpkgs; latestRustPlatform.buildRustPackage {
     pname = "dailykaenguru";
     version = "0.1.0";
     doCheck = false;
+
+    src = builtins.fetchTarball "https://github.com/jvytee/dailykaenguru/archive/main.tar.gz";
     cargoSha256 = "1dxyrziz30y9c9cp9kkc2kd62mf6ng5l26g63ml0xh1g6bmv8ndn";
-
-    src = fetchFromGitHub {
-      owner = "jvytee";
-      repo = "dailykaenguru";
-      rev = "main";
-      sha256 = "0ilwspfvv4sczgymm0f99lkr0ndx58vqx9qhdf5xy6qay1kd833n";
-
-    };
 
     nativeBuildInputs = with pkgsBuildHost; [
       latest.rustChannels.stable.rust
@@ -45,5 +37,16 @@ in
       description = "Liefert den täglichen Känguru-Comic von Zeit Online auf Telegram";
       homepage = "https://github.com/jvytee/dailykaenguru";
       license = licenses.gpl3Only;
+    };
+  };
+in
+  nixpkgs.dockerTools.buildImage {
+    name = "dailykaenguru";
+    tag = "latest";
+    created = "now";
+
+    contents = dailykaenguru;
+    config = {
+      Cmd = [ "/bin/dailykaenguru" ];
     };
   }
