@@ -43,8 +43,14 @@ in
     tag = "latest";
     created = "now";
 
-    contents = dailykaenguru;
+    contents = [
+      nixpkgs.pkgsHostTarget.cacert
+      dailykaenguru
+    ];
     config = {
       Cmd = [ "/bin/dailykaenguru" ];
+      Volumes = {
+        "/data" = {};
+      };
     };
   }
