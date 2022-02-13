@@ -1,9 +1,11 @@
 mod bot;
-mod error;
 mod download;
+mod error;
+
+use crate::bot::TelegramBot;
 
 use chrono::prelude::*;
-use download::DownloadConfig;
+use download::Download;
 use error::Error;
 use getopts::Options;
 use std::env;
@@ -32,7 +34,7 @@ async fn run() -> Result<(), Error> {
         }
 
         let data_path: String = env::var("DAILYKAENGURU_DATA")?;
-        let download_config = DownloadConfig {
+        let download = Download {
             data_path: data_path.clone(),
             base_url: "https://img.zeit.de/administratives/kaenguru-comics".to_string(),
             filename: "original".to_string(),
@@ -42,7 +44,7 @@ async fn run() -> Result<(), Error> {
             log::info!("Downloading latest comic");
             let datetime = Local::now();
 
-            download::get_comic(datetime, &download_config).await?;
+            download.get_comic(datetime).await?;
         } else {
             log::info!("Starting telegram bot");
             let token: String = env::var("DAILYKAENGURU_TOKEN")?;
@@ -51,12 +53,19 @@ async fn run() -> Result<(), Error> {
                 .map(|delivery_string| NaiveTime::parse_from_str(&delivery_string, "%H:%M"))
                 .unwrap_or(Ok(NaiveTime::from_hms(9, 30, 0)))?;
 
-            let cache_path = Path::new(&data_path).join("chats.json")
+            let cache_path = Path::new(&data_path)
+                .join("chats.json")
                 .to_str()
                 .unwrap_or("chats.json")
                 .to_string();
 
-            bot::start_bot(token, download_config, delivery_time, cache_path).await?;
+            let telegram_bot = TelegramBot {
+                token,
+                cache_path,
+                delivery_time,
+                download,
+            };
+            telegram_bot.run_forever().await?;
         }
     }
 
