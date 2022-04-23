@@ -33,9 +33,8 @@ async fn run() -> Result<(), Error> {
             return Ok(());
         }
 
-        let data_path: String = env::var("DAILYKAENGURU_DATA")?;
         let download = Download {
-            data_path: data_path.clone(),
+            data_path: env::var("DAILYKAENGURU_DATA")?,
             base_url: "https://img.zeit.de/administratives/kaenguru-comics".to_string(),
             filename: "original".to_string(),
         };
@@ -51,9 +50,9 @@ async fn run() -> Result<(), Error> {
 
             let delivery_time = env::var("DAILYKAENGURU_DELIVERY")
                 .map(|delivery_string| NaiveTime::parse_from_str(&delivery_string, "%H:%M"))
-                .unwrap_or(Ok(NaiveTime::from_hms(9, 30, 0)))?;
+                .unwrap_or_else(|_| Ok(NaiveTime::from_hms(9, 30, 0)))?;
 
-            let cache_path = Path::new(&data_path)
+            let cache_path = Path::new(&download.data_path)
                 .join("chats.json")
                 .to_str()
                 .unwrap_or("chats.json")
@@ -65,6 +64,7 @@ async fn run() -> Result<(), Error> {
                 delivery_time,
                 download,
             };
+
             telegram_bot.run_forever().await?;
         }
     }

@@ -9,14 +9,14 @@ use std::sync::{Arc, Mutex};
 use teloxide::{
     prelude::*,
     types::{ChatId, InputFile},
-    utils::command::BotCommand,
+    utils::command::BotCommands,
     RequestError,
 };
 use tokio::time;
 
 type ChatCache = Arc<Mutex<HashSet<ChatId>>>;
 
-#[derive(BotCommand)]
+#[derive(Clone, BotCommands)]
 #[command(rename = "lowercase")]
 enum Command {
     #[command(description = "Startet den Bot")]
@@ -40,29 +40,29 @@ impl TelegramBot {
             Err(_) => HashSet::new(),
         };
         let chat_cache: ChatCache = Arc::new(Mutex::new(chat_ids));
-        let bot = Bot::new(self.token.clone()).auto_send();
+        let bot = Bot::new(&self.token).auto_send();
 
         {
             let wrapper = self.clone();
             let bot = bot.clone();
-            let chat_cache = chat_cache.clone();
+            let chat_cache = Arc::clone(&chat_cache);
             tokio::spawn(async move {
                 wrapper.deliver_comic(&bot, chat_cache).await;
             });
         }
 
-        teloxide::commands_repl(bot, "DailyKaenguruBot", move |cx, command: Command| {
+        teloxide::commands_repl(bot, move |bot: AutoSend<Bot>, message: Message, command: Command| {
             let wrapper = self.clone();
             let chat_cache = chat_cache.clone();
 
             async move {
                 match command {
-                    Command::Start => wrapper.start_cmd(&cx, chat_cache).await,
-                    Command::Stop => wrapper.stop_cmd(&cx, chat_cache).await,
+                    Command::Start => wrapper.start_cmd(bot, message, chat_cache).await,
+                    Command::Stop => wrapper.stop_cmd(bot, message, chat_cache).await,
                 }?;
                 respond(())
             }
-        })
+        }, Command::ty())
         .await;
 
         Ok(())
@@ -73,7 +73,7 @@ impl TelegramBot {
             time::sleep(self.time_remaining()).await;
 
             let comic = match self.download.get_comic(Local::now()).await {
-                Ok(content) => InputFile::memory("känguru.jpg", content),
+                Ok(content) => InputFile::memory(content),
                 Err(error) => {
                     log::warn!("Could not get comic: {}", error);
                     continue;
@@ -89,7 +89,7 @@ impl TelegramBot {
             };
 
             for chat in chats.iter() {
-                let send_photo = bot.send_photo(chat.to_owned(), comic.to_owned());
+                let send_photo = bot.send_photo(*chat, comic.clone());
                 if let Err(error) = send_photo.await {
                     log::warn!("Could not deliver comic to {}: {}", chat, error);
                 }
@@ -107,33 +107,33 @@ impl TelegramBot {
         }
     }
 
-    async fn start_cmd(&self, cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCache) -> Result<(), RequestError> {
-        let chat_id = cx.chat_id();
+    async fn start_cmd(&self, bot: AutoSend<Bot>, message: Message, chat_cache: ChatCache) -> Result<(), RequestError> {
+        let chat_id = message.chat.id;
 
         let answer = match chat_cache.lock() {
             Ok(mut chats) => {
-                if chats.insert(chat_id.into()) {
+                if chats.insert(chat_id) {
                     if let Err(error) = self.dump_chat_cache(chats.clone()) {
                         log::error!("Could not dump chat cache: {}", error);
                     }
                     log::info!("Starting delivery to chat {}", chat_id);
-                    cx.answer("Hallo!")
+                    bot.send_message(chat_id, "Hallo!")
                 } else {
                     log::info!("Already delivering to chat {}", chat_id);
-                    cx.answer("Schon unterwegs!")
+                    bot.send_message(chat_id, "Schon unterwegs!")
                 }
             }
             Err(error) => {
                 log::warn!("Could not lock chat cache: {}", error);
-                cx.answer("Razupaltuff.")
+                bot.send_message(chat_id, "Razupaltuff.")
             }
         };
 
         answer.await?;
         match self.download.get_comic(Local::now()).await {
             Ok(content) => {
-                let comic = InputFile::memory("känguru.jpg", content);
-                cx.answer_photo(comic).await?;
+                let comic = InputFile::memory(content);
+                bot.send_photo(chat_id, comic).await?;
             }
             Err(error) => log::warn!("Could not get comic: {}", error),
         }
@@ -141,12 +141,12 @@ impl TelegramBot {
         Ok(())
     }
 
-    async fn stop_cmd(&self, cx: &UpdateWithCx<AutoSend<Bot>, Message>, chat_cache: ChatCache) -> Result<(), RequestError> {
-        let chat = &cx.update.chat;
+    async fn stop_cmd(&self, bot: AutoSend<Bot>, message: Message, chat_cache: ChatCache) -> Result<(), RequestError> {
+        let chat = message.chat;
 
         log::info!("Stopping delivery to chat {}", chat.id);
         if let Ok(mut chats) = chat_cache.lock() {
-            chats.remove(&chat.id.into());
+            chats.remove(&chat.id);
             if let Err(error) = self.dump_chat_cache(chats.clone()) {
                 log::error!("Could not dump chat cache: {}", error);
             }
@@ -155,23 +155,23 @@ impl TelegramBot {
         if chat.is_private() {
             log::debug!("Cannot leave private chat");
         } else {
-            cx.requester.leave_chat(chat.id).await?;
+            bot.leave_chat(chat.id).await?;
         }
 
-        cx.answer("Ciao!").await?;
+        bot.send_message(chat.id, "Ciao!").await?;
         Ok(())
     }
 
     fn load_chat_cache(&self) -> Result<HashSet<ChatId>, std::io::Error> {
         let file = File::open(&self.cache_path)?;
-        serde_json::from_reader(file)
-            .map(|chat_ids: Vec<ChatId>| HashSet::from_iter(chat_ids))
-            .map_err(|err| std::io::Error::from(err))
+        serde_json::from_reader::<File, Vec<ChatId>>(file)
+            .map(HashSet::from_iter)
+            .map_err(std::io::Error::from)
     }
 
     fn dump_chat_cache(&self, chat_cache: HashSet<ChatId>) -> Result<(), std::io::Error> {
         let chat_ids: Vec<ChatId> = Vec::from_iter(chat_cache);
         let file = File::create(&self.cache_path)?;
-        serde_json::to_writer(file, &chat_ids).map_err(|err| std::io::Error::from(err))
+        serde_json::to_writer(file, &chat_ids).map_err(std::io::Error::from)
     }
 }

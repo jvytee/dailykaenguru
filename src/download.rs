@@ -20,7 +20,7 @@ impl Download {
             Ok(comic)
         } else {
             let comic = self.download_comic(datetime).await?;
-            self.save_comic(comic.clone(), datetime)?;
+            self.save_comic(&comic, datetime)?;
             Ok(comic)
         };
     }
@@ -49,7 +49,7 @@ impl Download {
 
     fn save_comic(
         &self,
-        comic: Vec<u8>,
+        comic: &Vec<u8>,
         datetime: DateTime<Local>,
     ) -> Result<(), std::io::Error> {
         let filename = format!("kaenguru_{}.webp", datetime.format("%Y-%m-%d"));
@@ -65,7 +65,7 @@ impl Download {
         let filepath = Path::new(&self.data_path).join(filename);
 
         return if filepath.exists() {
-            fs::read(filepath.as_path()).map(|bytes| Some(bytes))
+            fs::read(filepath.as_path()).map(Some)
         } else {
             Ok(None)
         };
