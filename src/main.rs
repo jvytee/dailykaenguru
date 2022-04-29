@@ -2,14 +2,13 @@ mod bot;
 mod download;
 mod error;
 
-use crate::bot::TelegramBot;
-
 use chrono::prelude::*;
 use download::Download;
 use error::Error;
 use getopts::Options;
 use std::env;
 use std::path::Path;
+use teloxide::prelude::*;
 
 #[tokio::main]
 async fn main() {
@@ -58,14 +57,8 @@ async fn run() -> Result<(), Error> {
                 .unwrap_or("chats.json")
                 .to_string();
 
-            let telegram_bot = TelegramBot {
-                token,
-                cache_path,
-                delivery_time,
-                download,
-            };
-
-            telegram_bot.run_forever().await?;
+            let bot = Bot::new(token).auto_send();
+            bot::run_bot(bot, cache_path, delivery_time, download).await?;
         }
     }
 
