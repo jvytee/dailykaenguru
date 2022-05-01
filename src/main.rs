@@ -1,6 +1,7 @@
 mod bot;
 mod download;
 mod error;
+mod persistence;
 
 use chrono::prelude::*;
 use download::Download;
