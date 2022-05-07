@@ -32,14 +32,10 @@ impl Persistence {
     }
 
     fn chat_ids_path(&self) -> PathBuf {
-        let mut path = self.path.clone();
-        path.push(&self.chat_ids_file);
-        path
+        self.path.join(&self.chat_ids_file)
     }
 
     fn comic_path(&self, dt: &DateTime<Local>) -> PathBuf {
-        let mut path = self.path.clone();
-        path.push(format!("kaenguru_{}.webp", dt.format("%Y-%m-%d")));
-        path
+        self.path.join(format!("kaenguru_{}.webp", dt.format("kaenguru_%Y-%m-%d.webp")))
     }
 }
