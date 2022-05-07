@@ -11,6 +11,8 @@ use std::env;
 use std::path::Path;
 use teloxide::prelude::*;
 
+use crate::persistence::Persistence;
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
@@ -58,8 +60,9 @@ async fn run() -> Result<(), Error> {
                 .unwrap_or("chats.json")
                 .to_string();
 
-            let bot = Bot::new(token).auto_send();
-            bot::run_bot(bot, cache_path, delivery_time, download).await?;
+            let teloxide_bot = Bot::new(token).auto_send();
+            let persistence = Persistence { path: cache_path.into(), chat_ids_file: "chats.json".into() };
+            bot::run_bot(teloxide_bot, persistence, download).await?;
         }
     }
 
