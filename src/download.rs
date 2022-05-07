@@ -4,7 +4,7 @@ use chrono::prelude::*;
 use std::fs;
 use std::path::Path;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Download {
     pub data_path: String,
     pub base_url: String,
