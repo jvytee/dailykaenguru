@@ -55,6 +55,19 @@ pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Dow
     Ok(())
 }
 
+pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: Persistence, download: &Download) -> Result<(), Error> {
+    let comic = InputFile::memory(download.get_comic(Local::now()).await?);
+    let chat_ids = persistence.load_chat_ids()?;
+    for chat in chat_ids {
+        let send_photo = bot.send_photo(chat, comic.clone());
+        if let Err(error) = send_photo.await {
+            log::warn!("Could not deliver comic to {}: {}", chat, error);
+        }
+    }
+
+    Ok(())
+}
+
 async fn manage_data(persistence: Persistence, mut receiver: mpsc::Receiver<Action>) {
     let mut chat_ids = persistence.load_chat_ids().unwrap_or(HashSet::new());
     while let Some(message) = receiver.recv().await {
@@ -113,16 +126,4 @@ impl CommandsRepl {
         bot.send_message(chat.id, "Ciao!").await?;
         Ok(())
     }
-}
-
-async fn deliver_comic(bot: &AutoSend<Bot>, chat_ids: &HashSet<ChatId>, download: &Download) -> Result<(), Error> {
-    let comic = InputFile::memory(download.get_comic(Local::now()).await?);
-    for chat in chat_ids {
-        let send_photo = bot.send_photo(*chat, comic.clone());
-        if let Err(error) = send_photo.await {
-            log::warn!("Could not deliver comic to {}: {}", chat, error);
-        }
-    }
-
-    Ok(())
 }
