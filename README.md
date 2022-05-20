@@ -30,13 +30,15 @@ It can be easily configured via environment variables:
 # Use /var/lib/dailykaenguru as cache directory
 export DAILYKAENGURU_DATA=/var/lib/dailykaenguru
 
-# Deliver comic to subscribers each day at 09:30
-export DAILYKAENGURU_DELIVERY=09:30
-
 # Set secret telegram bot token
 export DAILYKAENGURU_TOKEN=123:topsecret
 
 dailykaenguru
 ```
+
+To deliver the comic to all users that signed up, run `dailykaenguru --deliver`.
+E.g. You could do so every morning at 09:00 using SystemD timers or any scheduling solution you like.
+
+Running `dailykaenguru --download` will only acquire the latest comic from the internet.
 
 You can furthermore set the `RUST_LOG` environment variable to [adjust log verbosity](https://docs.rs/env_logger).
