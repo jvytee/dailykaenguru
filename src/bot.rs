@@ -3,14 +3,14 @@ use crate::error::Error;
 use crate::persistence::Persistence;
 
 use std::collections::HashSet;
-use chrono::Local;
+use chrono::prelude::*;
 use teloxide::{
     prelude::*,
     types::{ChatId, InputFile},
     utils::command::BotCommands,
     RequestError,
 };
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 #[derive(Clone, BotCommands)]
 #[command(rename = "lowercase")]
@@ -30,17 +30,21 @@ enum Action {
 #[derive(Clone, Debug)]
 struct CommandsRepl {
     sender: mpsc::Sender<Action>,
+    persistence: Persistence,
     download: Download
 }
 
 pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Download) -> Result<(), Error> {
     let (sender, receiver) = mpsc::channel::<Action>(32);
 
-    tokio::spawn(async move {
+    {
+        let persistence = persistence.clone();
+        tokio::spawn(async move {
             manage_data(persistence, receiver).await
-    });
+        });
+    }
 
-    let commands_repl = CommandsRepl { sender, download };
+    let commands_repl = CommandsRepl { sender, persistence, download };
     teloxide::commands_repl(
         bot,
         move |bot, message, command| {
@@ -51,19 +55,6 @@ pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Dow
         },
         Command::ty()
     ).await;
-
-    Ok(())
-}
-
-pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: Persistence, download: &Download) -> Result<(), Error> {
-    let comic = InputFile::memory(download.get_comic(Local::now()).await?);
-    let chat_ids = persistence.load_chat_ids()?;
-    for chat in chat_ids {
-        let send_photo = bot.send_photo(chat, comic.clone());
-        if let Err(error) = send_photo.await {
-            log::warn!("Could not deliver comic to {}: {}", chat, error);
-        }
-    }
 
     Ok(())
 }
@@ -80,6 +71,29 @@ async fn manage_data(persistence: Persistence, mut receiver: mpsc::Receiver<Acti
     };
 }
 
+pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &Persistence, download: &Download) -> Result<(), Error> {
+    let comic = get_comic(persistence, download, Local::now()).await
+        .map(InputFile::memory)?;
+    let chat_ids = persistence.load_chat_ids()?;
+    for chat in chat_ids {
+        let send_photo = bot.send_photo(chat, comic.clone());
+        if let Err(error) = send_photo.await {
+            log::warn!("Could not deliver comic to {}: {}", chat, error);
+        }
+    }
+
+    Ok(())
+}
+
+async fn get_comic(persistence: &Persistence, download: &Download, datetime: DateTime<Local>) -> Result<Vec<u8>, Error> {
+    return if let Ok(comic) = persistence.load_comic(&datetime) {
+        Ok(comic)
+    } else {
+        let comic = download.download_comic(datetime).await?;
+        persistence.save_comic(&datetime, &comic)?;
+        Ok(comic)
+    };
+}
 
 impl CommandsRepl {
     pub async fn answer (&self, bot: AutoSend<Bot>, message: Message, command: Command) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -99,7 +113,7 @@ impl CommandsRepl {
         self.sender.send(action).await;
         bot.send_message(chat_id, "Hallo!").await?;
 
-        match self.download.get_comic(Local::now()).await {
+        match get_comic(&self.persistence, &self.download, Local::now()).await {
             Ok(content) => {
                 let comic = InputFile::memory(content);
                 bot.send_photo(chat_id, comic).await?;

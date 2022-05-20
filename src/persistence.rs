@@ -36,6 +36,6 @@ impl Persistence {
     }
 
     fn comic_path(&self, dt: &DateTime<Local>) -> PathBuf {
-        self.path.join(format!("kaenguru_{}.webp", dt.format("kaenguru_%Y-%m-%d.webp")))
+        self.path.join(dt.format("kaenguru_%Y-%m-%d.webp").to_string())
     }
 }
