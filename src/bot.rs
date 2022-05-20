@@ -3,7 +3,6 @@ use crate::persistence::Persistence;
 
 use anyhow::Result;
 use chrono::prelude::*;
-use std::collections::HashSet;
 use teloxide::{
     prelude::*,
     types::{ChatId, InputFile},
