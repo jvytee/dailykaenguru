@@ -59,7 +59,7 @@ pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Dow
 }
 
 async fn manage_data(persistence: Persistence, mut receiver: mpsc::Receiver<Action>) {
-    let mut chat_ids = persistence.load_chat_ids().unwrap_or(HashSet::new());
+    let mut chat_ids = persistence.load_chat_ids().unwrap_or_default();
     while let Some(message) = receiver.recv().await {
         match message {
             Action::Add(chat_id) => chat_ids.insert(chat_id),
