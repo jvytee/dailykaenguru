@@ -7,7 +7,7 @@ pub struct Download {
 }
 
 impl Download {
-    pub async fn download_comic(&self, datetime: DateTime<Local>) -> Result<Vec<u8>, reqwest::Error> {
+    pub async fn download_comic(&self, datetime: &DateTime<Local>) -> Result<Vec<u8>, reqwest::Error> {
         log::info!("Downloading comic for {}", datetime);
 
         let url = format!(

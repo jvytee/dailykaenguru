@@ -89,7 +89,7 @@ async fn get_comic(persistence: &Persistence, download: &Download, datetime: Dat
     return if let Ok(comic) = persistence.load_comic(&datetime) {
         Ok(comic)
     } else {
-        let comic = download.download_comic(datetime).await?;
+        let comic = download.download_comic(&datetime).await?;
         persistence.save_comic(&datetime, &comic)?;
         Ok(comic)
     };
