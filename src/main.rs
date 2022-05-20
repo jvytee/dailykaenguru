@@ -7,7 +7,7 @@ use chrono::prelude::*;
 use download::Download;
 use getopts::Options;
 use serde::Deserialize;
-use std::env;
+use std::{env, fs};
 use std::path::PathBuf;
 use teloxide::prelude::*;
 
@@ -17,7 +17,7 @@ use crate::persistence::Persistence;
 struct Config {
     data_path: PathBuf,
     chats_file: String,
-    token: String,
+    token_file: PathBuf,
 }
 
 #[tokio::main]
@@ -59,7 +59,8 @@ async fn run() -> Result<()> {
         return Ok(());
     }
 
-    let teloxide_bot = Bot::new(config.token).auto_send();
+    let token = fs::read_to_string(&config.token_file)?;
+    let teloxide_bot = Bot::new(token).auto_send();
 
     if matches.opt_present("d") {
         bot::deliver_comic(&teloxide_bot, &persistence, &download).await?;
