@@ -28,10 +28,13 @@ It can be easily configured via environment variables:
 
 ```sh
 # Use /var/lib/dailykaenguru as cache directory
-export DAILYKAENGURU_DATA=/var/lib/dailykaenguru
+export KAENGURU_DATA_PATH=/var/lib/dailykaenguru
 
-# Set secret telegram bot token
-export DAILYKAENGURU_TOKEN=123:topsecret
+# Store active chats in JSON file (relative to cache directory)
+export KAENGURU_CHATS_FILE=chats.json
+
+# Read secret Telegram bot token from file
+export KAENGURU_TOKEN_FILE=/etc/dailykaenguru/token
 
 dailykaenguru
 ```
