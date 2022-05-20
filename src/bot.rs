@@ -1,14 +1,13 @@
 use crate::download::Download;
-use crate::error::Error;
 use crate::persistence::Persistence;
 
-use std::collections::HashSet;
+use anyhow::Result;
 use chrono::prelude::*;
+use std::collections::HashSet;
 use teloxide::{
     prelude::*,
     types::{ChatId, InputFile},
     utils::command::BotCommands,
-    RequestError,
 };
 use tokio::sync::mpsc;
 
@@ -34,7 +33,7 @@ struct CommandsRepl {
     download: Download
 }
 
-pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Download) -> Result<(), Error> {
+pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Download) -> Result<()> {
     let (sender, receiver) = mpsc::channel::<Action>(32);
 
     {
@@ -67,11 +66,13 @@ async fn manage_data(persistence: Persistence, mut receiver: mpsc::Receiver<Acti
             Action::Remove(chat_id) => chat_ids.remove(&chat_id)
         };
 
-        persistence.save_chat_ids(&chat_ids);
+        if let Err(error) = persistence.save_chat_ids(&chat_ids) {
+            log::error!("Could not save chat IDs: {}", error);
+        }
     };
 }
 
-pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &Persistence, download: &Download) -> Result<(), Error> {
+pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &Persistence, download: &Download) -> Result<()> {
     let comic = get_comic(persistence, download, Local::now()).await
         .map(InputFile::memory)?;
     let chat_ids = persistence.load_chat_ids()?;
@@ -85,7 +86,7 @@ pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &Persistence, downl
     Ok(())
 }
 
-async fn get_comic(persistence: &Persistence, download: &Download, datetime: DateTime<Local>) -> Result<Vec<u8>, Error> {
+async fn get_comic(persistence: &Persistence, download: &Download, datetime: DateTime<Local>) -> Result<Vec<u8>> {
     return if let Ok(comic) = persistence.load_comic(&datetime) {
         Ok(comic)
     } else {
@@ -105,12 +106,12 @@ impl CommandsRepl {
         Ok(())
     }
 
-    async fn start_cmd(&self, bot: AutoSend<Bot>, message: Message) -> Result<(), RequestError> {
+    async fn start_cmd(&self, bot: AutoSend<Bot>, message: Message) -> Result<()> {
         let chat_id = message.chat.id;
         let action = Action::Add(chat_id);
 
         log::info!("Starting delivery to chat {}", chat_id);
-        self.sender.send(action).await;
+        self.sender.send(action).await?;
         bot.send_message(chat_id, "Hallo!").await?;
 
         match get_comic(&self.persistence, &self.download, Local::now()).await {
@@ -124,12 +125,12 @@ impl CommandsRepl {
         Ok(())
     }
 
-    async fn stop_cmd(&self, bot: AutoSend<Bot>, message: Message) -> Result<(), RequestError> {
+    async fn stop_cmd(&self, bot: AutoSend<Bot>, message: Message) -> Result<()> {
         let chat = message.chat;
         let action = Action::Remove(chat.id);
 
         log::info!("Stopping delivery to chat {}", chat.id);
-        self.sender.send(action).await;
+        self.sender.send(action).await?;
 
         if chat.is_private() {
             log::debug!("Cannot leave private chat");

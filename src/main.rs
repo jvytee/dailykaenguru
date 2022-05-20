@@ -1,6 +1,5 @@
 mod bot;
 mod download;
-mod error;
 mod persistence;
 
 use anyhow::Result;
