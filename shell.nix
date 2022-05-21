@@ -22,6 +22,7 @@ in
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER = "${stdenv.cc.targetPrefix}cc";
 
     RUST_LOG = "info";
-    DAILYKAENGURU_DATA = "data/";
-    DAILYKAENGURU_TOKEN = "";
+    KAENGURU_DATA_PATH = "data/";
+    KAENGURU_CHATS_FILE = "chats.json";
+    KAENGURU_TOKEN_FIlE = "data/token";
   }
