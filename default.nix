@@ -1,4 +1,4 @@
-{ crossSystem ? builtins.currentSystem }:
+{ crossSystem ? { system = builtins.currentSystem; } }:
 
 let
   moz_overlay = import (builtins.fetchTarball https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz);
@@ -14,11 +14,11 @@ let
 
   dailykaenguru = with nixpkgs; latestRustPlatform.buildRustPackage {
     pname = "dailykaenguru";
-    version = "0.1.0";
+    version = "0.2.0";
     doCheck = false;
 
     src = builtins.fetchTarball "https://github.com/jvytee/dailykaenguru/archive/main.tar.gz";
-    cargoSha256 = "1dxyrziz30y9c9cp9kkc2kd62mf6ng5l26g63ml0xh1g6bmv8ndn";
+    cargoSha256 = "sha256-yXsEtTopTGf43qiAxgsgWEgVcW6b53EC0Dhr4XmYIGY=";
 
     nativeBuildInputs = with pkgsBuildHost; [
       latest.rustChannels.stable.rust
