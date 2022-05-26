@@ -1,0 +1,12 @@
+name: build
+on: push
+jobs:
+  build-default:
+    runs-on: ubuntu-latest
+    container:
+      image: nixos/nix
+    steps:
+      - run: echo Building in container...
+      - run: nix-build
+      - run: echo Done.
+    
