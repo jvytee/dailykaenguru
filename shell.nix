@@ -12,6 +12,7 @@ in
       pkgconfig
       rust-analyzer
       stdenv.cc
+      yaml-language-server
     ];
 
     buildInputs = with pkgsHostTarget; [
