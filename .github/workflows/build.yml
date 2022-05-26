@@ -6,8 +6,8 @@ jobs:
     container:
       image: nixos/nix
     steps:
-      - uses: actions/checkout@v3
-      - run: pwd
-      - run: ls -lah
-      - run: nix-build
-    
+      - run: nix-build https://github.com/jvytee/dailykaenguru/archive/main.tar.gz
+      - uses: actions/upload-artifact@v3
+        with:
+          name: dailykaenguru-image-x86_64
+          path: result/
