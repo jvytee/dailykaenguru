@@ -1,4 +1,5 @@
 use chrono::{DateTime, Local};
+use sqlx::{SqliteConnection, prelude::*};
 use std::{
     collections::HashSet,
     fs::{self, File},
@@ -6,13 +7,25 @@ use std::{
 };
 use teloxide::types::ChatId;
 
+#[derive(Debug)]
+pub struct DBPersistence {
+    connection: SqliteConnection
+}
+
+impl DBPersistence {
+    pub async fn new(filename: &str) -> sqlx::Result<Self> {
+        let connection = SqliteConnection::connect(&format!("sqlite:{}", filename)).await?;
+        Ok(Self { connection })
+    }
+}
+
 #[derive(Clone, Debug)]
-pub struct Persistence {
+pub struct FilePersistence {
     pub path: PathBuf,
     pub chat_ids_file: String
 }
 
-impl Persistence {
+impl FilePersistence {
     pub fn load_chat_ids(&self) -> std::io::Result<HashSet<ChatId>> {
         let file = File::open(self.chat_ids_path())?;
         serde_json::from_reader::<File, HashSet<ChatId>>(file).map_err(std::io::Error::from)

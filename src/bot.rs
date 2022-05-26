@@ -1,5 +1,5 @@
 use crate::download::Download;
-use crate::persistence::Persistence;
+use crate::persistence::FilePersistence;
 
 use anyhow::Result;
 use chrono::prelude::*;
@@ -28,11 +28,11 @@ enum Action {
 #[derive(Clone, Debug)]
 struct CommandsRepl {
     sender: mpsc::Sender<Action>,
-    persistence: Persistence,
+    persistence: FilePersistence,
     download: Download
 }
 
-pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Download) -> Result<()> {
+pub async fn run_bot(bot: AutoSend<Bot>, persistence: FilePersistence, download: Download) -> Result<()> {
     let (sender, receiver) = mpsc::channel::<Action>(32);
 
     {
@@ -57,7 +57,7 @@ pub async fn run_bot(bot: AutoSend<Bot>, persistence: Persistence, download: Dow
     Ok(())
 }
 
-async fn manage_data(persistence: Persistence, mut receiver: mpsc::Receiver<Action>) {
+async fn manage_data(persistence: FilePersistence, mut receiver: mpsc::Receiver<Action>) {
     let mut chat_ids = persistence.load_chat_ids().unwrap_or_default();
     while let Some(message) = receiver.recv().await {
         match message {
@@ -71,7 +71,7 @@ async fn manage_data(persistence: Persistence, mut receiver: mpsc::Receiver<Acti
     };
 }
 
-pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &Persistence, download: &Download) -> Result<()> {
+pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &FilePersistence, download: &Download) -> Result<()> {
     let comic = get_comic(persistence, download, Local::now()).await
         .map(InputFile::memory)?;
     let chat_ids = persistence.load_chat_ids()?;
@@ -85,7 +85,7 @@ pub async fn deliver_comic(bot: &AutoSend<Bot>, persistence: &Persistence, downl
     Ok(())
 }
 
-async fn get_comic(persistence: &Persistence, download: &Download, datetime: DateTime<Local>) -> Result<Vec<u8>> {
+async fn get_comic(persistence: &FilePersistence, download: &Download, datetime: DateTime<Local>) -> Result<Vec<u8>> {
     return if let Ok(comic) = persistence.load_comic(&datetime) {
         Ok(comic)
     } else {

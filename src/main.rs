@@ -11,7 +11,7 @@ use std::{env, fs};
 use std::path::PathBuf;
 use teloxide::prelude::*;
 
-use crate::persistence::Persistence;
+use crate::persistence::FilePersistence;
 
 #[derive(Clone, Debug, Deserialize)]
 struct Config {
@@ -49,7 +49,7 @@ async fn run() -> Result<()> {
         base_url: "https://img.zeit.de/administratives/kaenguru-comics".to_string(),
         filename: "original".to_string(),
     };
-    let persistence = Persistence { path: config.data_path, chat_ids_file: config.chats_file };
+    let persistence = FilePersistence { path: config.data_path, chat_ids_file: config.chats_file };
 
     if matches.opt_present("D") {
         log::info!("Downloading latest comic");
