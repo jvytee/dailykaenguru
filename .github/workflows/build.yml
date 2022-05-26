@@ -7,8 +7,7 @@ jobs:
       image: nixos/nix
     steps:
       - run: nix-build https://github.com/jvytee/dailykaenguru/archive/main.tar.gz
-      - run: touch /etc/lsb_release
       - uses: actions/upload-artifact@v3
         with:
           name: dailykaenguru-image-x86_64
-          path: result/
+          path: result
