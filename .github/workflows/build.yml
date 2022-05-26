@@ -6,7 +6,8 @@ jobs:
     container:
       image: nixos/nix
     steps:
-      - run: echo Building in container...
+      - uses: actions/checkout@v3
+      - run: pwd
+      - run: ls -lah
       - run: nix-build
-      - run: echo Done.
     
