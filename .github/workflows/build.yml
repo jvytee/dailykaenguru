@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: cachix/install-nix-action@v17
         with:
-          nix-path: nixpkgs=channel:nixos-21.11
+          nix_path: nixpkgs=channel:nixos-21.11
       - run: nix-build https://github.com/jvytee/dailykaenguru/archive/main.tar.gz
       - uses: actions/upload-artifact@v3
         with:
