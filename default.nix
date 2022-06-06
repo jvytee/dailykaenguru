@@ -12,9 +12,11 @@ let
     cargo = nixpkgs.pkgsBuildHost.latest.rustChannels.stable.cargo;
   };
 
-  dailykaenguru = with nixpkgs; latestRustPlatform.buildRustPackage {
+  version = "0.2.0";
+
+  application = with nixpkgs; latestRustPlatform.buildRustPackage {
     pname = "dailykaenguru";
-    version = "0.2.0";
+    version = version;
     doCheck = false;
 
     src = builtins.fetchTarball "https://github.com/jvytee/dailykaenguru/archive/main.tar.gz";
@@ -39,20 +41,34 @@ let
       license = licenses.gpl3Only;
     };
   };
-in
-  nixpkgs.dockerTools.buildLayeredImage {
+
+  layeredImage = nixpkgs.dockerTools.buildLayeredImage {
     name = "dailykaenguru";
-    tag = "latest";
+    tag = version;
     created = "now";
 
     contents = [
       nixpkgs.pkgsHostTarget.cacert
-      dailykaenguru
+      application
     ];
+
     config = {
       Cmd = [ "/bin/dailykaenguru" ];
       Volumes = {
         "/data" = {};
       };
     };
+  };
+
+  exportImage = nixpkgs.dockerTools.exportImage {
+    fromImage = layeredImage;
+    fromImageName = "dailykaenguru";
+    fromImageTag = version;
+    name = layeredImage.name;
+  };
+in
+  {
+    dailykaenguru = application;
+    dailykaenguru-layeredImage = layeredImage;
+    dailykaenguru-exportImage = exportImage;
   }
