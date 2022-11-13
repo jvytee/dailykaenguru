@@ -10,7 +10,6 @@ in
     nativeBuildInputs = with pkgsBuildHost; [
       latest.rustChannels.stable.rust
       pkgconfig
-      rust-analyzer
       stdenv.cc
       yaml-language-server
     ];
@@ -21,6 +20,7 @@ in
     ];
 
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER = "${stdenv.cc.targetPrefix}cc";
+    RUST_SRC_PATH = "${pkgsBuildHost.latest.rustChannels.stable.rust-src}/lib/rustlib/src/rust/library";
 
     RUST_LOG = "info";
     KAENGURU_DATA_PATH = "data/";
