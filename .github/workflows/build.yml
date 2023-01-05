@@ -1,14 +1,27 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: build
 on: push
 jobs:
   build-default:
     runs-on: ubuntu-latest
     steps:
-      - uses: cachix/install-nix-action@v17
+      - uses: cachix/install-nix-action@v18
         with:
-          nix_path: nixpkgs=channel:nixos-21.11
-      - run: nix-build https://github.com/jvytee/dailykaenguru/archive/main.tar.gz
+          nix_path: nixpkgs=channel:nixos-22.11
+
+      - run: nix-build https://github.com/jvytee/dailykaenguru/archive/github_actions.tar.gz -A dailykaenguru-layeredImage
+
+      - run: docker load -i ${{ github.workspace }}/result
+
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: docker push ghcr.io/jvytee/dailykaenguru:latest
+
       - uses: actions/upload-artifact@v3
         with:
           name: dailykaenguru-image-x86_64
-          path: ${{ github.workspace}}/result
+          path: ${{ github.workspace }}/result
