@@ -43,7 +43,7 @@ let
   };
 
   layeredImage = nixpkgs.dockerTools.buildLayeredImage {
-    name = "dailykaenguru";
+    name = "ghcr.io/jvytee/dailykaenguru";
     tag = version;
     created = "now";
 
@@ -63,7 +63,7 @@ let
   exportImage = nixpkgs.dockerTools.exportImage {
     fromImage = layeredImage;
     fromImageName = "dailykaenguru";
-    fromImageTag = version;
+    fromImageTag = latest;
     name = layeredImage.name;
   };
 in
