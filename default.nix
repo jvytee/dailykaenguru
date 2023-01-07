@@ -19,7 +19,10 @@ let
     version = version;
     doCheck = false;
 
-    src = builtins.fetchTarball "https://github.com/jvytee/dailykaenguru/archive/main.tar.gz";
+    src = fetchGit {
+      url = "https://github.com/jvytee/dailykaenguru.git";
+      ref = "github_actions";
+    };
     cargoSha256 = "sha256-yXsEtTopTGf43qiAxgsgWEgVcW6b53EC0Dhr4XmYIGY=";
 
     nativeBuildInputs = with pkgsBuildHost; [
@@ -43,8 +46,8 @@ let
   };
 
   layeredImage = nixpkgs.dockerTools.buildLayeredImage {
-    name = "ghcr.io/jvytee/dailykaenguru";
-    tag = "latest";
+    name = "dailykaenguru";
+    tag = version;
     created = "now";
 
     contents = [
@@ -59,16 +62,8 @@ let
       };
     };
   };
-
-  exportImage = nixpkgs.dockerTools.exportImage {
-    fromImage = layeredImage;
-    fromImageName = "dailykaenguru";
-    fromImageTag = "latest";
-    name = layeredImage.name;
-  };
 in
   {
     dailykaenguru = application;
     dailykaenguru-layeredImage = layeredImage;
-    dailykaenguru-exportImage = exportImage;
   }
