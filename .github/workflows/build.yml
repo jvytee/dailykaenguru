@@ -2,16 +2,22 @@
 name: build
 on: push
 jobs:
-  build-default:
+  build-image:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
       - uses: cachix/install-nix-action@v18
         with:
           nix_path: nixpkgs=channel:nixos-22.11
 
-      - run: nix-build https://github.com/jvytee/dailykaenguru/archive/github_actions.tar.gz -A dailykaenguru-layeredImage
+      - run: nix-build -A dailykaenguru-layeredImage
 
       - run: docker load -i ${{ github.workspace }}/result
+
+      - run: echo 'image_name=$(docker images dailykaenguru --format "{{ index .Names 0 }}")' >> $GITHUB_ENV
+
+      - run: docker tag {{ env.image_name }} ghcr.io/jvytee/{{ env.image_name }}
 
       - uses: docker/login-action@v2
         with:
@@ -19,7 +25,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker push ghcr.io/jvytee/dailykaenguru:latest
+      - run: docker push ghcr.io/jvytee/{{ env.image_name }}
 
       - uses: actions/upload-artifact@v3
         with:
