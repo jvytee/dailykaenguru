@@ -13,19 +13,17 @@ jobs:
 
       - run: nix-build -A dailykaenguru-layeredImage
 
-      - run: docker load -i ${{ github.workspace }}/result
+      - run: podman load -i ${{ github.workspace }}/result
 
-      - run: echo 'image_name=$(docker images dailykaenguru --format "{{ index .Names 0 }}")' >> $GITHUB_ENV
+      - run: echo "image_tag=$(podman images dailykaenguru --format '{{ .Tag }}')" >> $GITHUB_ENV
 
-      - run: docker tag ${{ env.image_name }} ghcr.io/jvytee/${{ env.image_name }}
-
-      - uses: docker/login-action@v2
+      - uses: redhat-actions/push-to-registry@v2
         with:
-          registry: ghcr.io
+          registry: ghcr.io/jvytee
+          image: dailykaenguru
+          tags: ${{ env.image_tag }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - run: docker push ghcr.io/jvytee/{{ env.image_name }}
 
       - uses: actions/upload-artifact@v3
         with:
