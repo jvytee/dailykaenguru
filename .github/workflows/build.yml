@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
-name: build
+name: Create image
 on: push
 jobs:
   build-image:
@@ -13,7 +13,19 @@ jobs:
 
       - run: nix-build -A dailykaenguru-layeredImage
 
-      - run: podman load -i ${{ github.workspace }}/result
+      - uses: actions/upload-artifact@v3
+        with:
+          name: dailykaenguru-image-x86_64
+          path: ${{ github.workspace }}/result
+
+  release-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: dailykaenguru-image-x86_64
+          
+      - run: podman load -i dailykaenguru-image-x86_64
 
       - run: echo "image_tag=$(podman images dailykaenguru --format '{{ .Tag }}')" >> $GITHUB_ENV
 
@@ -25,7 +37,3 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/upload-artifact@v3
-        with:
-          name: dailykaenguru-image-x86_64
-          path: ${{ github.workspace }}/result
