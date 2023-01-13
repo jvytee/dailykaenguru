@@ -23,11 +23,11 @@ jobs:
     needs: build-image
     steps:
       - uses: actions/download-artifact@v3
+        id: download
         with:
           name: dailykaenguru-image-x86_64
-          path: ${{ github.workspace }}/dailykaenguru-image-x86_64
           
-      - run: podman load -i ${{ github.workspace }}/dailykaenguru-image-x86_64
+      - run: podman load -i ${{ steps.download-artifact.output.download-path }}/dailykaenguru-image-x86_64
 
       - run: echo "image_tag=$(podman images dailykaenguru --format '{{ .Tag }}')" >> $GITHUB_ENV
 
