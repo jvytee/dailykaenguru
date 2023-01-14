@@ -26,6 +26,8 @@ jobs:
         id: download-artifact
         with:
           name: dailykaenguru-image-x86_64
+
+      - run: ls -lh ${{ steps.download-artifact.outputs.download-path }}
           
       - run: podman load -i ${{ steps.download-artifact.outputs.download-path }}
 
