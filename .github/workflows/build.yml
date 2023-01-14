@@ -23,7 +23,7 @@ jobs:
     needs: build-image
     steps:
       - uses: actions/download-artifact@v3
-        id: download
+        id: download-artifact
         with:
           name: dailykaenguru-image-x86_64
           
